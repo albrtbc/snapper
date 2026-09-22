@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; object-src 'none'; img-src 'self' file: data:; style-src 'self'; script-src 'self'; connect-src 'none'"
+    />
+    <title>Snapper Overlay</title>
+    <link rel="stylesheet" href="overlay.css" />
+  </head>
+  <body>
+    <main id="panel" class="panel">
+      <header class="panel-header" aria-description="Drag this header to move the panel">
+        <div class="identity">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m12 2 9 5v10l-9 5-9-5V7Z M3 7l9 5 9-5 M12 12v10" /></svg
+          ><strong id="title">Your deck</strong>
+        </div>
+        <div class="tools">
+          <button
+            id="lock"
+            aria-label="Pass clicks to the game"
+            aria-pressed="false"
+            aria-keyshortcuts="Control+Shift+L"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path id="lock-icon" d="M7 10V7a5 5 0 0 1 10 0M5 10h14v11H5Z M12 14v3" />
+            </svg></button
+          ><button id="settings" aria-label="Open settings">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16M4 17h16M8 4v6M16 14v6" /></svg></button
+          ><button id="minimize" aria-label="Minimize panel" aria-expanded="true">
+            <svg viewBox="0 0 24 24"><path d="M5 12h14" /></svg>
+          </button>
+        </div>
+      </header>
+      <div id="content">
+        <div id="counters" class="counters"></div>
+        <div id="cards" class="card-list"></div>
+        <div id="extra"></div>
+        <div id="piles"></div>
+        <details id="history-section" class="history">
+          <summary>History <span id="history-count">0</span></summary>
+          <div id="history"></div>
+        </details>
+      </div>
+    </main>
+    <div id="card-tooltip" role="tooltip" hidden>
+      <strong id="tooltip-name"></strong>
+      <p id="tooltip-ability"></p>
+    </div>
+    <script src="overlay.js"></script>
+  </body>
+</html>

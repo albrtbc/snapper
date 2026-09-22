@@ -1,0 +1,74 @@
+{
+  "name": "snapper",
+  "version": "0.1.0",
+  "description": "Local card overlay for Marvel Snap",
+  "private": true,
+  "main": "src/main.cjs",
+  "scripts": {
+    "start": "electron . --ozone-platform=x11",
+    "demo": "electron . --ozone-platform=x11 --demo",
+    "test": "node --test test/*.test.cjs",
+    "check": "node scripts/check.cjs",
+    "diagnose": "node scripts/diagnose.cjs",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "setup": "install-electron",
+    "test:ui": "electron scripts/smoke.cjs --ozone-platform=x11",
+    "install:linux": "node scripts/install-linux.cjs",
+    "install:hyprland": "node scripts/install-hyprland.cjs",
+    "uninstall:linux": "node scripts/uninstall-linux.cjs",
+    "test:installed": "electron scripts/installed-smoke.cjs --ozone-platform=x11",
+    "test:drag": "electron scripts/drag-smoke.cjs --ozone-platform=x11",
+    "test:interaction": "electron scripts/interaction-smoke.cjs --ozone-platform=x11",
+    "test:follow": "electron scripts/follow-smoke.cjs --ozone-platform=x11",
+    "test:variants": "electron scripts/variant-smoke.cjs --ozone-platform=x11",
+    "test:input-bounds": "electron scripts/input-bounds-smoke.cjs --ozone-platform=x11",
+    "test:deck-layout": "electron scripts/deck-layout-smoke.cjs --ozone-platform=x11",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:visibility": "electron scripts/visibility-smoke.cjs --ozone-platform=x11",
+    "source:archive": "node scripts/source-archive.cjs"
+  },
+  "devDependencies": {
+    "electron": "^44.4.3",
+    "electron-builder": "^26.15.3",
+    "prettier": "3.9.8"
+  },
+  "build": {
+    "appId": "io.snapper.overlay",
+    "productName": "Snapper",
+    "asarUnpack": [
+      "src/services/live-worker.cjs",
+      "src/services/memory.cjs",
+      "src/services/input-region.py",
+      "src/services/avatar-worker.cjs",
+      "src/services/avatar-menu.cjs"
+    ],
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json",
+      "LICENSE.md",
+      "THIRD_PARTY_NOTICES.md",
+      "SECURITY.md"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "dir"
+      ],
+      "category": "Game",
+      "icon": "assets/icon.png",
+      "syncDesktopName": true
+    },
+    "win": {
+      "target": "portable"
+    }
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "desktopName": "snapper.desktop",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "author": "Snapper contributors"
+}

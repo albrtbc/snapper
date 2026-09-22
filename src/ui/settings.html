@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; object-src 'none'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'none'"
+    />
+    <title>Snapper · Settings</title>
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="brand">Snapper<span>MARVEL SNAP TRACKER</span></div>
+        <span class="version">0.1.0</span>
+      </header>
+      <h1>Your whole deck at a glance.</h1>
+      <p class="intro">Your deck on the left. Opponent cards on the right. Keep the board clear.</p>
+      <section class="connection">
+        <div><span id="dot"></span><strong id="game-status">Looking for the game…</strong></div>
+        <p id="data-status" role="status">Reading local data</p>
+      </section>
+      <section>
+        <h2>Match data</h2>
+        <p>
+          Snapper reads live match data on Linux and loads your deck from local files. Steam
+          libraries are detected automatically.
+        </p>
+        <div id="path" class="path">Looking for the folder…</div>
+        <div class="actions">
+          <button id="choose">Choose folder</button
+          ><button id="auto" class="secondary">Detect automatically</button>
+        </div>
+        <p id="path-error" role="alert"></p>
+        <p class="note">
+          Live data refreshes every 350 ms on supported builds. If unavailable, Snapper uses saved
+          data. The game may take time to write a new state.
+        </p>
+      </section>
+      <section>
+        <h2>Panels</h2>
+        <div class="range-row">
+          <label for="scale">Size</label
+          ><input id="scale" type="range" min="0.75" max="1.4" step="0.05" /><output
+            id="scale-value"
+            for="scale"
+            >100%</output
+          >
+        </div>
+        <div class="range-row">
+          <label for="opacity">Opacity</label
+          ><input id="opacity" type="range" min="0.65" max="1" step="0.05" /><output
+            id="opacity-value"
+            for="opacity"
+            >95%</output
+          >
+        </div>
+        <label class="check"><input type="checkbox" id="compact" /> Compact grid</label
+        ><label class="check"><input type="checkbox" id="images" /> Show card images</label
+        ><label class="check"
+          ><input type="checkbox" id="gameArt" aria-describedby="game-art-note" /> Use in-game
+          variants</label
+        >
+        <p id="game-art-note" class="note">
+          Show each card’s equipped artwork. Use base art when a variant is unavailable. Finishes
+          and animations are not included.
+        </p>
+        <p class="note">
+          Images download from Snap.fan on first use and are cached on this computer.
+        </p>
+        <div class="actions">
+          <button id="save">Save settings</button
+          ><button id="position" class="secondary">Reset positions</button>
+        </div>
+        <p id="saved" role="status"></p>
+      </section>
+      <section>
+        <h2>While playing</h2>
+        <dl>
+          <div>
+            <dt>Show or hide panels</dt>
+            <dd><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>O</kbd></dd>
+          </div>
+          <div>
+            <dt>Toggle click-through</dt>
+            <dd><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>L</kbd></dd>
+          </div>
+          <div>
+            <dt>Open settings</dt>
+            <dd><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>,</kbd></dd>
+          </div>
+        </dl>
+        <p class="note">
+          Drag a header to move a panel. Unlock panels to scroll, view abilities or expand piles.
+          Lock them to pass card-area clicks to the game. Header controls remain available. You can
+          also use the Snapper tray icon.
+        </p>
+        <p id="shortcut-errors" role="status"></p>
+      </section>
+      <footer>
+        Match data stays on your computer. No account or sync.<br />Independent project. Artwork by
+        Marvel / Second Dinner, served by Snap.fan.
+      </footer>
+    </main>
+    <script src="settings.js"></script>
+  </body>
+</html>

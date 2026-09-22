@@ -1,0 +1,402 @@
+:root {
+  color-scheme: dark;
+  --bg: #19171f;
+  --surface: #24212c;
+  --line: #3b3646;
+  --text: #f5f2f8;
+  --muted: #bbb3c6;
+  --accent: #a9d6f9;
+  --hand: #d4e8b8;
+  --discard: #dfbdec;
+  --destroy: #edbb9f;
+  font:
+    12px/1.4 'Segoe UI',
+    system-ui,
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+* {
+  box-sizing: border-box;
+}
+[hidden] {
+  display: none !important;
+}
+html,
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+body {
+  padding: 3px;
+}
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+button:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+::selection {
+  background: #59446e;
+  color: #fff;
+}
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: #71627f;
+  border-radius: 3px;
+}
+svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+button svg {
+  display: block;
+}
+.panel {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  max-height: calc(var(--panel-height-limit, 100vh) - 6px);
+  display: flex;
+  flex-direction: column;
+}
+.opponent {
+  --accent: #edcb9f;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: var(--surface);
+  -webkit-app-region: no-drag;
+  user-select: none;
+}
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.identity > svg {
+  color: var(--accent);
+  width: 16px;
+}
+.identity strong {
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tools {
+  display: flex;
+  -webkit-app-region: no-drag;
+}
+.tools button {
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  border-radius: 3px;
+  color: var(--muted);
+}
+.tools button:hover {
+  background: #42394f;
+  color: white;
+}
+#content {
+  overflow: auto;
+  min-height: 0;
+}
+.counters {
+  display: flex;
+  border: 1px solid var(--line);
+  background: #211e28;
+  margin: 6px 9px 0;
+  padding: 6px 9px;
+  gap: 18px;
+}
+.counter {
+  display: flex;
+  gap: 5px;
+  align-items: baseline;
+  color: var(--muted);
+  font-size: 12px;
+}
+.counter b {
+  font-size: 16px;
+  color: var(--text);
+  line-height: 1;
+}
+.card-list,
+.pile-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px 2px;
+  padding: 6px 7px 5px;
+}
+.card-row {
+  position: relative;
+  aspect-ratio: 0.74;
+  min-width: 0;
+  isolation: isolate;
+}
+.portrait {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  background: #29232f;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+  padding: 6px;
+}
+.portrait.has-art {
+  background: transparent;
+}
+.portrait img {
+  position: absolute;
+  width: 124%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+  left: -12%;
+  top: 0;
+}
+.card-info {
+  position: absolute;
+  bottom: 6px;
+  left: 5px;
+  right: 5px;
+  text-align: center;
+  z-index: 1;
+}
+.card-name {
+  font-size: 12px;
+  line-height: 1.1;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+  text-shadow: 0 1px 2px #000;
+}
+.has-art + .card-info {
+  display: none;
+}
+.card-row .cost,
+.card-row .power {
+  position: absolute;
+  z-index: 2;
+  top: 6%;
+  display: grid;
+  place-items: center;
+  width: 27%;
+  height: auto;
+  aspect-ratio: 1;
+  padding: 0 4px;
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 800;
+  color: white;
+  text-shadow: 0 1px 2px #000;
+  border: 1px solid #bfd5ff;
+}
+.cost {
+  left: 2%;
+  background: #164597;
+  border-radius: 50%;
+}
+.card-row .power {
+  right: 2%;
+  background: #aa500d;
+  border-color: #ffe2a3;
+  border-radius: 5px;
+}
+.panel:not(.opponent) #cards .outside-deck .portrait,
+.opponent .card-row[data-status='unseen'] .portrait,
+.opponent .card-row[data-status='deck'] .portrait {
+  filter: grayscale(1) brightness(0.66);
+  opacity: 0.65;
+}
+.panel:not(.opponent) #cards .outside-deck .cost,
+.panel:not(.opponent) #cards .outside-deck .power,
+.opponent .card-row[data-status='unseen'] .cost,
+.opponent .card-row[data-status='deck'] .cost,
+.opponent .card-row[data-status='unseen'] .power,
+.opponent .card-row[data-status='deck'] .power {
+  filter: grayscale(1);
+  opacity: 0.48;
+}
+.group-title {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 8px 10px 0;
+  font-weight: 600;
+}
+#piles {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: start;
+  margin: 5px 9px 0;
+  gap: 4px;
+}
+.pile {
+  margin: 0;
+  min-width: 0;
+  border-top: 1px solid var(--line);
+}
+.pile summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12px;
+  font-weight: 600;
+  user-select: none;
+  padding: 7px 4px;
+  background: #25212d;
+}
+.pile summary svg {
+  width: 15px;
+  height: 15px;
+}
+.pile.discarded summary {
+  color: var(--discard);
+}
+.pile.destroyed summary {
+  color: var(--destroy);
+}
+.pile .card-list {
+  padding: 7px 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.pile-empty {
+  color: var(--muted);
+  font-size: 11px;
+  padding: 5px 0;
+}
+.empty {
+  grid-column: 1/-1;
+  padding: 20px 10px;
+  color: var(--muted);
+  line-height: 1.5;
+  text-align: center;
+}
+.empty strong {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+}
+.history {
+  margin: 6px 10px;
+  color: var(--muted);
+}
+.history summary {
+  font-size: 11px;
+  cursor: pointer;
+}
+.history summary span {
+  margin-left: 4px;
+}
+.history-row {
+  font-size: 11px;
+  margin: 7px 0;
+}
+.history-row b {
+  color: var(--text);
+  font-weight: 500;
+}
+.compact #cards,
+.compact #extra .card-list {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.compact .card-row .cost,
+.compact .card-row .power {
+  font-size: 13px;
+  min-width: 19px;
+  height: 19px;
+}
+.panel-header {
+  cursor: grab;
+  touch-action: none;
+}
+.panel-header:active {
+  cursor: grabbing;
+}
+
+.card-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+.card-row:hover .portrait {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+#content {
+  overscroll-behavior: contain;
+}
+#card-tooltip {
+  position: fixed;
+  z-index: 20;
+  width: min(310px, calc(100vw - 16px));
+  max-height: calc(var(--panel-height-limit, 100vh) - 16px);
+  overflow: auto;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+#card-tooltip #tooltip-name {
+  display: block;
+  font-size: 15px;
+  line-height: 1.3;
+}
+#card-tooltip p {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.tools button[aria-pressed='true'] {
+  color: var(--accent);
+}
+
+#card-tooltip.control-tooltip {
+  width: max-content;
+  max-width: calc(100vw - 16px);
+  padding: 8px 10px;
+}
+#card-tooltip.control-tooltip #tooltip-name {
+  font-size: 12px;
+  font-weight: 500;
+}
+#card-tooltip.control-tooltip p {
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--muted);
+}

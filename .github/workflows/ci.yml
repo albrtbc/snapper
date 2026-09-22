@@ -1,0 +1,45 @@
+name: Checks
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run format:check
+      - run: npm test
+      - run: npm audit --audit-level=high
+
+  ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Enable sandboxed Electron on the ephemeral runner
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libx11-6 libxext6 libgtk-3-0 libnss3 libasound2t64
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - run: npm run setup
+      - run: xvfb-run -a npm run test:visibility
+      - run: xvfb-run -a npm run test:interaction
+      - run: xvfb-run -a npm run test:deck-layout
+      - run: npm run pack
