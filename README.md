@@ -2,7 +2,22 @@
 
 A Marvel Snap card overlay for Linux, inspired by LTD2 Smart Overlay, Untapped and Marvel Snap Zone. Source available for noncommercial use under [PolyForm Noncommercial 1.0.0](LICENSE.md). Electron runs natively on Linux while the game runs through Steam/Proton. All app text is in English.
 
-## Setup
+## Install the AppImage
+
+Download the Linux x86-64 AppImage from [Releases](https://github.com/albrtbc/snapper/releases/latest), make it executable and open it. Choose **Install** to add Snapper to your application menu and start it automatically with Marvel Snap. Node.js and a source checkout are not required.
+
+```sh
+chmod +x Snapper-0.1.0-linux-x86_64.AppImage
+./Snapper-0.1.0-linux-x86_64.AppImage --appimage-extract-and-run --install
+```
+
+The command works without FUSE. **Run once**, or `--portable`, skips installation. Installed launches use extract-and-run for FUSE-independent startup. Extraction adds some startup time.
+
+Installation copies the AppImage to `~/.local/share/snapper/`, adds `~/.local/bin/snapper`, and registers a desktop-login watcher. It does not require administrator access. Python 3, libX11, libXext and X11/XWayland are still required. AppImage is a Linux package, not a Windows/macOS build.
+
+Download a newer AppImage and choose **Install** to update. `~/.local/bin/snapper --uninstall` removes the application, launcher and autostart entry while preserving settings and cached artwork. XDG data/config/cache directory overrides are respected.
+
+## Setup from source
 
 Requires Node.js 22.12 or newer, Python 3, X11 or XWayland, libX11 and libXext. Hyprland integration is optional.
 
@@ -20,7 +35,7 @@ To start Snapper automatically with Marvel Snap:
 npm run install:linux
 ```
 
-This installs `~/.local/bin/snapper`, an application menu entry and `~/.config/autostart/snapper-watcher.desktop`. A small Node process checks for `SNAP.exe` every two seconds. Electron opens with the game and closes when it exits. Quitting Snapper from the tray prevents another launch until the next game session. Keep this project at its installed path, or run the installer again after moving it.
+This installs `~/.local/bin/snapper`, an application menu entry and `~/.config/autostart/snapper-watcher.desktop`. A small Python process checks for `SNAP.exe` every two seconds. Electron opens with the game and closes when it exits. Quitting Snapper from the tray prevents another launch until the next game session. Keep this project at its installed path, or run the installer again after moving it.
 
 For Omarchy / Hyprland 0.55 or newer with Lua configuration:
 
@@ -50,7 +65,7 @@ Only your deck appears in the lobby. The opponent panel appears during a match a
 - Show observed cards from the opponent’s original deck, including remembered cards returned to hand and cards you steal. Stolen cards also appear in your Added section; piles follow current ownership. Generated cards and cards taken from your deck are excluded from the opponent grid, piles and history.
 - Use four columns of full card art with closely spaced rows. Compact mode uses five columns.
 - Keep remaining own-deck cards in color and gray out drawn, played and other cards outside your deck. Cards returned to your deck regain color. Opponent styling is unchanged. Omit per-card status labels and check marks.
-- Display deck and hand counts, added cards and observed movement history. Discarded, Destroyed and Banished piles sit side by side in one row. Omit deck names, turn, cubes and the overlay status footer.
+- Display deck and hand counts in each panel header, replacing the visible panel names. Show added cards and observed movement history. Discarded, Destroyed and Banished piles sit side by side in one row. Omit deck names, turn, cubes and the overlay status footer.
 - Show only the English ability description on hover or keyboard focus, with labels such as **On Reveal:** and **When Discarded:** in bold. Cache descriptions for 24 hours and reuse them offline.
 - Optionally use each card's equipped variant through **Use in-game variants**, disabled by default. Unavailable variants fall back to base art. Finishes, borders and animations are not reproduced.
 
@@ -91,7 +106,9 @@ npm run test:follow       # game-relative positions
 npm run test:variants     # base/variant switching and persistence
 npm run pack              # dist/linux-unpacked/snapper
 npm run test:installed    # packaged live reader; game must be open
-npm run dist              # Linux AppImage
+npm run dist              # Linux x86-64 AppImage
+npm run test:appimage     # extracted-package install/uninstall and watcher
+npm run test:watcher      # game lifecycle tests
 ```
 
 UI tests need a graphical session and temporarily open windows with isolated settings and offline fixtures. They use the original project icon as placeholder art and do not download card art or require a private cache. Screenshots go into `artifacts/`. Tests cover hidden cards, staged plays, invalid references, match transitions, variant identity and saved-state fallback. Demo screenshots verify presentation; they do not prove live tracking.
@@ -149,3 +166,10 @@ whole working directory, which may contain ignored personal and game data.
 explicit list of source directories. It excludes caches, screenshots, binaries
 and dependencies, and rejects symlinks and known private state files. Review its
 contents before sharing it.
+
+## Publishing a release
+
+Update the package version and add `docs/releases/<version>.md`. Push a matching
+`v<version>` tag. The release workflow builds on Ubuntu 22.04, runs core, watcher,
+native UI and AppImage installation checks, then publishes the AppImage, source
+archive and `SHA256SUMS`. No release is published if a required check fails.

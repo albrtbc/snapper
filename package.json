@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Local card overlay for Marvel Snap",
   "private": true,
-  "main": "src/main.cjs",
+  "main": "src/entry.cjs",
   "scripts": {
     "start": "electron . --ozone-platform=x11",
     "demo": "electron . --ozone-platform=x11 --demo",
@@ -11,7 +11,7 @@
     "check": "node scripts/check.cjs",
     "diagnose": "node scripts/diagnose.cjs",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder",
+    "dist": "electron-builder --linux AppImage --x64 --publish never",
     "setup": "install-electron",
     "test:ui": "electron scripts/smoke.cjs --ozone-platform=x11",
     "install:linux": "node scripts/install-linux.cjs",
@@ -27,7 +27,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:visibility": "electron scripts/visibility-smoke.cjs --ozone-platform=x11",
-    "source:archive": "node scripts/source-archive.cjs"
+    "source:archive": "node scripts/source-archive.cjs",
+    "test:watcher": "python3 -B -m unittest discover -s test -p \"*_test.py\"",
+    "test:appimage": "node scripts/appimage-smoke.cjs",
+    "release:checksums": "node scripts/release-assets.cjs"
   },
   "devDependencies": {
     "electron": "^44.4.3",
@@ -50,7 +53,8 @@
       "package.json",
       "LICENSE.md",
       "THIRD_PARTY_NOTICES.md",
-      "SECURITY.md"
+      "SECURITY.md",
+      "integrations/**/*"
     ],
     "linux": {
       "target": [
@@ -59,10 +63,16 @@
       ],
       "category": "Game",
       "icon": "assets/icon.png",
-      "syncDesktopName": true
+      "syncDesktopName": true,
+      "executableArgs": [
+        "--ozone-platform=x11"
+      ]
     },
     "win": {
       "target": "portable"
+    },
+    "appImage": {
+      "artifactName": "Snapper-${version}-linux-${arch}.${ext}"
     }
   },
   "engines": {
@@ -70,5 +80,10 @@
   },
   "desktopName": "snapper.desktop",
   "license": "PolyForm-Noncommercial-1.0.0",
-  "author": "Snapper contributors"
+  "author": "Snapper contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/albrtbc/snapper.git"
+  },
+  "homepage": "https://github.com/albrtbc/snapper"
 }

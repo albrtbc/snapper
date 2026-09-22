@@ -39,9 +39,9 @@ Known limits:
   claims to have done.
 - Distribution signing and automatic updates are not configured. Re-audit
   dependencies and inspect release contents before publishing each binary.
-- CI is configured, but a local run does not demonstrate that a remote workflow
-  has executed. Private vulnerability reporting must be enabled on the hosting
-  repository when it is created.
+- The initial remote CI run passed on GitHub. Release tags now run separate
+  build, installer and UI checks before publishing assets. Private vulnerability
+  reporting must be enabled separately in repository settings.
 - The current packaging toolchain includes deprecated transitive packages
   (`glob`, `inflight`, `rimraf` and `boolean`). They are development dependencies;
   no known advisories were reported in this review. Track upstream updates rather
@@ -63,7 +63,7 @@ References: [Electron security recommendations](https://www.electronjs.org/docs/
 
 ## Checks completed in this review
 
-- 45 automated core/security tests passed.
+- 47 automated core/security/installation tests and four watcher tests passed.
 - Syntax and formatting checks passed.
 - Eight native UI suites passed: visibility, interaction, deck layout, variants,
   input bounds, dragging, game-window following and general smoke checks.
@@ -75,5 +75,6 @@ References: [Electron security recommendations](https://www.electronjs.org/docs/
   state files, caches or test helpers appear in the application archive.
 - The packaged variant/settings smoke check also passed using offline fixtures.
 
-The CI configuration has not been run on a remote host. The live game was closed
-at the end of this review, so the packaged live-reader check was not rerun.
+The initial CI run passed on GitHub. The AppImage installer and singleton watcher
+checks passed from the extracted package. The packaged live-reader check also
+passed with Marvel Snap open in the lobby.

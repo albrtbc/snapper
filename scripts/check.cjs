@@ -7,6 +7,12 @@ function check(dir) {
     if (entry.isDirectory()) check(file);
     else if (/\.(cjs|js)$/.test(file))
       execFileSync(process.execPath, ['--check', file], { stdio: 'inherit' });
+    else if (file.endsWith('.py'))
+      execFileSync(
+        'python3',
+        ['-c', 'import ast, pathlib, sys; ast.parse(pathlib.Path(sys.argv[1]).read_text())', file],
+        { stdio: 'inherit' },
+      );
   }
 }
 for (const dir of ['src', 'scripts', 'test']) if (fs.existsSync(dir)) check(dir);

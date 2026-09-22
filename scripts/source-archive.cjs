@@ -36,8 +36,9 @@ function collect(relative) {
   const name = path.basename(relative);
   if (
     privateNames.has(name) ||
+    ['__pycache__', '.pytest_cache'].includes(name) ||
     /^\.env(?:\.|$)/.test(name) ||
-    /\.(?:pem|key|pfx|p12|dmp|log)$/i.test(name)
+    /\.(?:pem|key|pfx|p12|dmp|log|pyc)$/i.test(name)
   )
     throw new Error(`Private file in source tree: ${relative}`);
   if (stat.isDirectory()) {

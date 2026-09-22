@@ -54,3 +54,12 @@ not merely to meet a line-count rule.
 
 `npm test` uses synthetic inputs. Native smoke checks patch services with offline
 fixtures in `test/helpers/`; these hooks are not part of the packaged app.
+
+## Linux distribution
+
+`entry.cjs` routes AppImage installation and removal before loading the overlay.
+`linux-install.cjs` installs a stable per-user executable, launcher and desktop
+entries. Source installs reuse the same integration. `watch-game.py` holds an
+exclusive process lock and launches at most once per observed game session. It
+uses system Python, not a source checkout or Node installation, and terminates
+the AppImage process group when the game exits.
