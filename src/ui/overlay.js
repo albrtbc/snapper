@@ -32,7 +32,7 @@ const artCache = new Map(),
     ['destroyed', true],
   ]);
 $('panel').classList.toggle('opponent', side === 'opponent');
-$('title').textContent = side === 'own' ? 'Your deck' : 'Opponent';
+$('panel').setAttribute('aria-label', side === 'own' ? 'Your deck' : 'Opponent');
 function el(tag, className, text) {
   const n = document.createElement(tag);
   if (className) n.className = className;
@@ -328,12 +328,22 @@ function render(state) {
   lastRender = signature;
   if (!tooltipOwner?.closest('.tools')) hideTooltip();
   const match = state.match;
+  $('title').replaceChildren();
+  for (const [name, value] of [
+    [
+      'Deck',
+      match?.players[side].deckCount ?? (side === 'own' ? state.selectedDeck?.cards.length : null),
+    ],
+    ['Hand', match?.players[side].handCount],
+  ]) {
+    const counter = el('div', 'counter');
+    counter.append(el('span', '', name), el('b', '', String(value ?? '—')));
+    $('title').append(counter);
+  }
   $('extra').replaceChildren();
   $('piles').replaceChildren();
   $('history').replaceChildren();
   if (!match) {
-    $('counters').replaceChildren();
-    $('counters').hidden = true;
     const cards =
       side === 'own'
         ? (state.selectedDeck?.cards || []).map((c) => ({ ...c, status: 'unseen' }))
@@ -346,16 +356,6 @@ function render(state) {
     $('history-section').hidden = true;
     restoreHover();
     return;
-  }
-  $('counters').hidden = false;
-  $('counters').replaceChildren();
-  for (const [name, value] of [
-    ['Deck', match.players[side].deckCount],
-    ['Hand', match.players[side].handCount],
-  ]) {
-    const c = el('div', 'counter');
-    c.append(el('span', '', name), el('b', '', String(value)));
-    $('counters').append(c);
   }
   const cards = side === 'own' ? match.deckRows : match.opponent;
   renderList($('cards'), cards, side === 'opponent' ? 'No cards seen yet' : 'No cards');

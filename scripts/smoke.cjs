@@ -25,6 +25,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     );
     if (result.rows < 5 || result.scrollWidth > result.width)
       throw new Error(JSON.stringify(result));
+    const headerCounts = await win.webContents.executeJavaScript(`({
+      inHeader: document.querySelector('.panel-header #title')?.children.length === 2,
+      duplicateRow: !!document.querySelector('#content .counters'),
+      accessibleName: document.querySelector('#panel').getAttribute('aria-label')
+    })`);
+    if (!headerCounts.inHeader || headerCounts.duplicateRow || !headerCounts.accessibleName)
+      throw new Error('Header counts missing or duplicated');
     console.log(result);
   }
   await wait(300);

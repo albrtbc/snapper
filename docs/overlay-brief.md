@@ -35,3 +35,9 @@ Keep remaining own-deck cards in full color. Gray out drawn, played and other ca
 ## Full card names, 2026-09-22
 
 Use a .74 card aspect ratio and fit images within the full available height without a negative top offset. Preserve card width while keeping the bottom names visible in main grids, added cards and piles, including compact mode.
+
+## Header counts, 2026-09-22
+
+Replace visible own/opponent titles with Deck and Hand counts in each header.
+Remove the separate counter strip to free vertical room. Preserve the side's
+colored icon, accessible panel name and the lock/settings/minimize controls.

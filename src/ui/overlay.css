@@ -98,15 +98,11 @@ button svg {
 .identity > svg {
   color: var(--accent);
   width: 16px;
-}
-.identity strong {
-  font-size: 15px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex-shrink: 0;
 }
 .tools {
   display: flex;
+  flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
 .tools button {
@@ -126,11 +122,8 @@ button svg {
 }
 .counters {
   display: flex;
-  border: 1px solid var(--line);
-  background: #211e28;
-  margin: 6px 9px 0;
-  padding: 6px 9px;
-  gap: 18px;
+  gap: 14px;
+  white-space: nowrap;
 }
 .counter {
   display: flex;
