@@ -15,6 +15,7 @@ const { Worker } = require('node:worker_threads');
 const { StateReader } = require('./services/reader.cjs');
 const { discoverStates } = require('./services/paths.cjs');
 const { gameRunning, gameBounds } = require('./services/game.cjs');
+const { activeFocus } = require('./services/focus.cjs');
 const { CardArt } = require('./services/art.cjs');
 const { demoState } = require('./demo.cjs');
 const { InputRegion } = require('./services/input-region.cjs');
@@ -51,10 +52,12 @@ let settings,
   timer,
   pointerTimer,
   boundsTimer,
+  focusTimer,
   inputRegion,
   cardInfo,
   avatarWorker;
 let quitting = false;
+let focusState = 'unknown';
 let avatarMenuOpen = false,
   avatarMenuAvailable = false,
   lastMatchId = null;
@@ -79,6 +82,7 @@ const serialize = () => ({
   locked,
   settings,
   shortcuts,
+  focusState,
   avatarMenuOpen,
   avatarMenuAvailable,
   gameBounds: gameRect,
@@ -204,8 +208,15 @@ function placeWindow(win, bounds) {
 }
 function visibility() {
   const inMatch = !!state.match && state.status !== 'lobby';
+  const focusAllowsPanels =
+    demo || !settings.hideWhenUnfocused || ['game', 'snapper'].includes(focusState);
   for (const [index, win] of windows.entries()) {
-    const visible = (running || demo) && !hidden && !avatarMenuOpen && (index === 0 || inMatch);
+    const visible =
+      (running || demo) &&
+      !hidden &&
+      !avatarMenuOpen &&
+      focusAllowsPanels &&
+      (index === 0 || inMatch);
     if (visible) {
       if (!win.isVisible()) win.showInactive();
     } else if (win.isVisible()) win.hide();
@@ -343,6 +354,23 @@ async function monitor() {
   menu();
   if (!reader?.directory && !demo) startReader();
   timer = setTimeout(monitor, 2000);
+}
+async function monitorFocus() {
+  try {
+    const next =
+      settings.hideWhenUnfocused && running && !demo
+        ? await activeFocus(() => inputRegion?.activeWindow())
+        : 'unknown';
+    if (quitting) return;
+    if (next !== focusState) {
+      focusState = next;
+      if (!['game', 'snapper'].includes(next)) finishDrag();
+      visibility();
+      broadcast();
+    }
+  } finally {
+    if (!quitting) focusTimer = setTimeout(monitorFocus, 200);
+  }
 }
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
@@ -503,6 +531,7 @@ else {
         'settings-save',
         async (event, input) => {
           Object.assign(settings, preferences(input));
+          visibility();
           save();
           for (const win of windows) {
             win.setOpacity(settings.opacity);
@@ -565,6 +594,7 @@ else {
       startReader();
       await monitor();
       followGame();
+      monitorFocus();
       if (!withGame && !demo) openSettings();
       if (demo) {
         running = true;
@@ -582,6 +612,7 @@ app.on('before-quit', () => {
   finishDrag();
   clearTimeout(timer);
   clearTimeout(boundsTimer);
+  clearTimeout(focusTimer);
   clearInterval(pointerTimer);
   inputRegion?.stop();
   avatarWorker?.terminate();

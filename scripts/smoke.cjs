@@ -54,12 +54,16 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     w.webContents.getURL().includes('settings.html'),
   );
   if (!settings) throw new Error('Settings not opened');
-  await settings.webContents.executeJavaScript('document.querySelector("#save").click()');
+  await settings.webContents.executeJavaScript(
+    'document.querySelector("#hideWhenUnfocused").checked = true; document.querySelector("#save").click()',
+  );
   await wait(400);
   const saved = await settings.webContents.executeJavaScript(
     'document.querySelector("#saved").textContent',
   );
   if (!saved.includes('saved')) throw new Error('Settings not saved');
+  const settingsState = await settings.webContents.executeJavaScript('window.snapper.getState()');
+  if (!settingsState.settings.hideWhenUnfocused) throw new Error('Focus preference was not saved');
   fs.writeFileSync('artifacts/settings.png', (await settings.webContents.capturePage()).toPNG());
   console.log('Native overlay smoke test passed.');
   app.quit();

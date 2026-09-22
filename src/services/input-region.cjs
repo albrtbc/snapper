@@ -24,16 +24,22 @@ class InputRegion {
         this.pending.delete(message.id);
         clearTimeout(pending.timer);
         if (message.error) pending.reject(new Error(message.error));
-        else pending.resolve(message.rects);
+        else pending.resolve('focus' in message ? message.focus : message.rects);
       } catch (error) {
         this.fail(error);
       }
     });
   }
   request(win, rects) {
-    if (this.closed) return Promise.reject(new Error('X11 input region unavailable'));
     const handle = win.getNativeWindowHandle();
     const window = handle.length >= 8 ? Number(handle.readBigUInt64LE()) : handle.readUInt32LE();
+    return this.send({ window, ...(rects === undefined ? {} : { rects }) });
+  }
+  activeWindow() {
+    return this.send({ action: 'active-window' });
+  }
+  send(payload) {
+    if (this.closed) return Promise.reject(new Error('X11 input region unavailable'));
     const id = ++this.next;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -41,9 +47,7 @@ class InputRegion {
         reject(new Error('X11 input region timed out'));
       }, 2000);
       this.pending.set(id, { resolve, reject, timer });
-      this.child.stdin.write(
-        JSON.stringify({ id, window, ...(rects === undefined ? {} : { rects }) }) + '\n',
-      );
+      this.child.stdin.write(JSON.stringify({ id, ...payload }) + '\n');
     });
   }
   fail(error) {

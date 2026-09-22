@@ -203,3 +203,11 @@ Settings uses filled primary actions, outlined secondary actions, native accent-
 - Don't treat a bright inferred own-deck card as a confirmed current deck location.
 - Don't merge movement history with current discard or destroy contents.
 - Don't claim live-game verification from demonstration captures or add decorative panel shadows.
+
+## Focus visibility
+
+Settings → Panels includes an opt-in checkbox, “Hide panels when Marvel Snap is
+not focused”. It shares Save settings with the existing preferences. Focusing
+another app hides both overlays without clearing match data or manual hide.
+Game and Snapper windows permit visibility. If focus is unavailable, the enabled
+option keeps panels hidden and settings explains how to restore them.

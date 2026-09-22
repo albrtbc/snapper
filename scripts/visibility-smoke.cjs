@@ -1,11 +1,19 @@
 // Inject game/UI state transitions; check real native window visibility.
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, globalShortcut } = require('electron');
 const { EventEmitter } = require('node:events');
 const path = require('node:path');
 const { demoState } = require('../src/demo.cjs');
 app.setPath('userData', path.resolve('.cache/visibility-smoke'));
 process.argv.push('--with-game');
 let reader, avatar;
+let focus = 'game',
+  togglePanels;
+const registerShortcut = globalShortcut.register.bind(globalShortcut);
+globalShortcut.register = (key, callback) => {
+  if (key === 'CommandOrControl+Shift+O') togglePanels = callback;
+  return registerShortcut(key, callback);
+};
+require('../src/services/focus.cjs').activeFocus = async () => focus;
 const live = { ...demoState(), status: 'live' };
 require('../src/services/reader.cjs').StateReader = class extends EventEmitter {
   constructor() {
@@ -76,6 +84,45 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   reader.emit('state', { ...live, status: 'lobby', match: null });
   await wait(100);
   check(true, false);
+  await own.webContents.executeJavaScript('window.snapper.openSettings()');
+  await wait(700);
+  const settings = BrowserWindow.getAllWindows().find((win) =>
+    win.webContents.getURL().includes('settings.html'),
+  );
+  await settings.webContents.executeJavaScript(
+    'window.snapper.saveSettings({ hideWhenUnfocused: true })',
+  );
+  await wait(350);
+  check(true, false);
+  focus = 'other';
+  await wait(350);
+  check(false, false);
+  reader.emit('state', live);
+  await wait(100);
+  check(false, false);
+  focus = 'game';
+  await wait(350);
+  check(true, true);
+  focus = 'snapper';
+  await wait(350);
+  check(true, true);
+  togglePanels();
+  focus = 'other';
+  await wait(350);
+  focus = 'game';
+  await wait(350);
+  check(false, false);
+  togglePanels();
+  check(true, true);
+  focus = 'unknown';
+  await wait(350);
+  check(false, false);
+  await settings.webContents.executeJavaScript(
+    'window.snapper.saveSettings({ hideWhenUnfocused: false })',
+  );
+  check(true, true);
+  reader.emit('state', { ...live, status: 'lobby', match: null });
+  check(true, false);
   console.log({
     startupOwnOnly: true,
     resultsKeepCards: true,
@@ -85,6 +132,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     avatarMenuHidesBoth: true,
     closeRestoresBoth: true,
     lobbyClearsMenu: true,
+    focusHidesAndRestores: true,
+    ownWindowsStayInteractive: true,
+    manualHidePreserved: true,
+    focusOptionCanBeDisabled: true,
   });
   app.quit();
 })().catch((error) => {

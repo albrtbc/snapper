@@ -68,6 +68,7 @@ test('settings accept only known fields with valid types and bounded values', ()
     scale: 100,
     opacity: -1,
     images: 'false',
+    hideWhenUnfocused: 'true',
     statesPath: '../../private',
     positions: {
       own: { x: Infinity, y: 0 },
@@ -78,6 +79,8 @@ test('settings accept only known fields with valid types and bounded values', ()
   assert.equal(settings.scale, 1.4);
   assert.equal(settings.opacity, 0.65);
   assert.equal(settings.images, true);
+  assert.equal(settings.hideWhenUnfocused, false);
+  assert.equal(readSettings({ hideWhenUnfocused: true }).hideWhenUnfocused, true);
   assert.equal(settings.statesPath, '');
   assert.deepEqual(settings.positions, { opponent: { x: 5, y: 10, relativeTo: 'game' } });
   assert.ok(!('unexpected' in settings));

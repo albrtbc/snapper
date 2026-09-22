@@ -63,3 +63,9 @@ entries. Source installs reuse the same integration. `watch-game.py` holds an
 exclusive process lock and launches at most once per observed game session. It
 uses system Python, not a source checkout or Node installation, and terminates
 the AppImage process group when the game exits.
+
+`focus.cjs` classifies the active window independently of game-data reading.
+Hyprland uses compositor focus; X11 reuses the persistent native helper. Other
+Wayland desktops return unknown instead of trusting stale XWayland focus.
+Focus visibility is an additional gate and never changes tracker state or the
+manual visibility setting.

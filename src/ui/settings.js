@@ -10,12 +10,18 @@ function render(state) {
   $('dot').classList.toggle('connected', state.running);
   $('data-status').textContent = state.message;
   $('path').textContent = state.statesPath || 'Folder not found';
+  $('focus-unavailable').hidden =
+    !state.settings.hideWhenUnfocused ||
+    state.demo ||
+    !state.running ||
+    state.focusState !== 'unknown';
   $('shortcut-errors').textContent = (state.shortcuts || []).some((s) => !s.registered)
     ? 'A shortcut is unavailable. Use the tray icon to control the panels.'
     : '';
   if (!initialized) {
     for (const id of ['scale', 'opacity']) $(id).value = state.settings[id];
-    for (const id of ['compact', 'images', 'gameArt']) $(id).checked = state.settings[id];
+    for (const id of ['compact', 'images', 'gameArt', 'hideWhenUnfocused'])
+      $(id).checked = state.settings[id];
     values();
     initialized = true;
   }
@@ -32,6 +38,7 @@ $('save').onclick = async () => {
     compact: $('compact').checked,
     images: $('images').checked,
     gameArt: $('gameArt').checked,
+    hideWhenUnfocused: $('hideWhenUnfocused').checked,
   });
   $('saved').textContent = 'Settings saved.';
 };

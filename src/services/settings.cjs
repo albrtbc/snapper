@@ -7,6 +7,7 @@ const DEFAULTS = Object.freeze({
   images: true,
   gameArt: false,
   compact: false,
+  hideWhenUnfocused: false,
 });
 const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 function preferences(input) {
@@ -18,7 +19,7 @@ function preferences(input) {
   ]) {
     if (Number.isFinite(input[key])) result[key] = Math.max(min, Math.min(max, input[key]));
   }
-  for (const key of ['images', 'gameArt', 'compact'])
+  for (const key of ['images', 'gameArt', 'compact', 'hideWhenUnfocused'])
     if (typeof input[key] === 'boolean') result[key] = input[key];
   return result;
 }

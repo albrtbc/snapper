@@ -7,8 +7,8 @@ A Marvel Snap card overlay for Linux, inspired by LTD2 Smart Overlay, Untapped a
 Download the Linux x86-64 AppImage from [Releases](https://github.com/albrtbc/snapper/releases/latest), make it executable and open it. Choose **Install** to add Snapper to your application menu and start it automatically with Marvel Snap. Node.js and a source checkout are not required.
 
 ```sh
-chmod +x Snapper-0.1.0-linux-x86_64.AppImage
-./Snapper-0.1.0-linux-x86_64.AppImage --appimage-extract-and-run --install
+chmod +x Snapper-0.1.1-linux-x86_64.AppImage
+./Snapper-0.1.1-linux-x86_64.AppImage --appimage-extract-and-run --install
 ```
 
 The command works without FUSE. **Run once**, or `--portable`, skips installation. Installed launches use extract-and-run for FUSE-independent startup. Extraction adds some startup time.
@@ -56,6 +56,8 @@ Launchers pass `--ozone-platform=x11` before Electron loads application JavaScri
 | Open settings        | Ctrl + Shift + , |
 
 Drag a panel header to move it. Positions are saved as offsets from the game window and follow its movement. Existing absolute positions migrate automatically. Panels start interactive: scroll with the wheel, expand piles and hover over cards for abilities. The header lock enables click-through over the cards; header controls remain accessible. Native windows shrink to the visible panel, leaving the space below available to the game. Card tooltips stay within the panel and open upward near its bottom without resizing the window. Only header tooltips on a minimized panel can temporarily expand the native window.
+
+In Settings → Panels, enable **Hide panels when Marvel Snap is not focused** to hide both overlays while another app is active. Returning to the game restores them without clearing tracked cards or changing manual hide. Interacting with Snapper keeps them visible. The option is off by default and supports Hyprland and X11 desktops; settings reports when focus detection is unavailable.
 
 Only your deck appears in the lobby. The opponent panel appears during a match and remains visible on the results screen until you return to the lobby. Opening either avatar menu hides both panels until that menu closes. Manual visibility settings are preserved.
 
