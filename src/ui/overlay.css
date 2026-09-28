@@ -191,7 +191,9 @@ button svg {
   overflow-wrap: anywhere;
   text-shadow: 0 1px 2px #000;
 }
-.has-art + .card-info {
+.has-art + .card-info,
+.card-row .has-art ~ .cost,
+.card-row .has-art ~ .power {
   display: none;
 }
 .card-row .cost,
