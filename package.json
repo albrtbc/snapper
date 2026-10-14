@@ -33,7 +33,7 @@
     "release:checksums": "node scripts/release-assets.cjs"
   },
   "devDependencies": {
-    "electron": "^44.4.3",
+    "electron": "^44.7.0",
     "electron-builder": "^26.15.3",
     "prettier": "3.9.8"
   },
