@@ -8,6 +8,10 @@ function render(state) {
       ? 'Marvel Snap is running'
       : 'Waiting for Marvel Snap';
   $('dot').classList.toggle('connected', state.running);
+  $('dot').classList.toggle(
+    'warn',
+    state.live?.ok === false && ['unsupported', 'denied'].includes(state.live.code),
+  );
   $('data-status').textContent = state.message;
   $('path').textContent = state.statesPath || 'Folder not found';
   $('focus-unavailable').hidden =

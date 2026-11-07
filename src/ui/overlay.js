@@ -308,6 +308,19 @@ function render(state) {
     $('tooltip-name').textContent = lockLabel;
     placeTooltip();
   }
+  const liveDown = state.live?.ok === false && ['unsupported', 'denied'].includes(state.live.code);
+  const reason = liveDown ? state.live.message.replace(/[.!?]?$/, '.') : '';
+  const settingsLabel = !liveDown
+    ? 'Open settings'
+    : state.live.code === 'unsupported'
+      ? `${reason} Open settings.`
+      : `Live tracking unavailable: ${reason} Open settings.`;
+  $('settings').classList.toggle('warn', liveDown);
+  $('settings').setAttribute('aria-label', settingsLabel);
+  if (tooltipOwner === $('settings')) {
+    $('tooltip-name').textContent = settingsLabel;
+    placeTooltip();
+  }
   $('lock').setAttribute('aria-pressed', String(state.locked));
   $('lock-icon').setAttribute(
     'd',

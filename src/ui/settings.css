@@ -84,8 +84,11 @@ p {
   border-radius: 50%;
   background: #eac79c;
 }
-#dot.connected {
+#dot.connected:not(.warn) {
   background: #bedb9a;
+}
+#dot.warn {
+  background: #f1b295;
 }
 section:not(.connection) {
   border-top: 1px solid var(--line);

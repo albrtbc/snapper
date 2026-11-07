@@ -110,6 +110,11 @@ components:
     textColor: '{colors.muted}'
     rounded: '{rounded.control}'
     padding: 4px
+  header-tool-warning:
+    backgroundColor: transparent
+    textColor: '{colors.destroy}'
+    rounded: '{rounded.control}'
+    padding: 4px
   card-fallback:
     backgroundColor: '{colors.portrait}'
     textColor: '{colors.text}'
@@ -132,7 +137,7 @@ The implemented overlay uses plum-black backgrounds, pale blue for the player an
 - Four full-card columns at the default panel width.
 - Bright remaining own-deck art, gray drawn or played cards, and ability text on hover.
 - Adjacent discard and destroy groups with counts and card images.
-- Visible header controls and a separate settings window for connection status.
+- Visible header controls and a separate settings window for connection status. The settings button turns into a warning when the game build is unsupported or access to its state is denied.
 
 This record describes the built overlay and settings files under `src/ui/`, plus native sizing in `src/main.cjs`. The accepted reference is the user-supplied Untapped screenshot. Finish review disposition was ship for `artifacts/grid-own.png`, `artifacts/grid-opponent.png`, `artifacts/grid-own-110.png` and `artifacts/grid-opponent-110.png`. These captures use demonstration data and establish presentation only. They do not verify a live game.
 
@@ -186,7 +191,7 @@ Cards give most of their area to art. Images fit within the full card height wit
 
 Pile summaries show an icon, title and count. Nonempty piles start open and retain the user's disclosure choice; empty piles start closed and contain None. Discard and destroy summaries remain present at zero. Movement history is a separate native disclosure with up to 15 recent visible transitions.
 
-Connection status appears in settings, with no overlay footer. Lobby clears the previous match and hides the opponent window. The selected deck stays visible in full color. Both panels hide while an avatar menu is open and respect manual visibility settings.
+Connection status appears in settings, with no overlay footer. When live reading is unavailable because the game build is unsupported or access is denied, the header settings button takes a warm warning tint and its tooltip explains why; there is still no footer, and transient reconnects do not trigger it. Lobby clears the previous match and hides the opponent window. The selected deck stays visible in full color. Both panels hide while an avatar menu is open and respect manual visibility settings.
 
 Settings uses filled primary actions, outlined secondary actions, native accent-colored ranges and checkboxes. Scale runs from 75% through 140% in 5% steps. The connection block pairs a dot with written status. Save feedback, path errors and shortcut errors have dedicated status text. Card art is cached locally after retrieval from Snap.fan. Settings includes “Use in-game variants”, off by default. When enabled, equipped deck variants and observed in-game variants select their matching illustration; missing variants fall back to base art. Base and variant cache entries are separate. Finishes, borders and animation are not reproduced.
 

@@ -228,11 +228,17 @@ function toggle() {
   visibility();
   menu();
 }
+// Unsupported game builds and denied access are the live-reader failures a
+// player can act on. Transient codes stay out of the tray.
+const liveWarning = (live) =>
+  live?.ok === false && ['unsupported', 'denied'].includes(live.code) ? live : null;
 function menu() {
-  if (tray)
+  if (tray) {
+    const warning = liveWarning(state.live);
     tray.setContextMenu(
       Menu.buildFromTemplate([
         { label: running ? 'Marvel Snap detected' : 'Waiting for Marvel Snap', enabled: false },
+        ...(warning ? [{ label: warning.message, enabled: false }] : []),
         { label: hidden ? 'Show panels' : 'Hide panels', click: toggle },
         {
           label: locked ? 'Unlock panels' : 'Lock and pass clicks through',
@@ -243,6 +249,7 @@ function menu() {
         { label: 'Quit Snapper', click: () => app.quit() },
       ]),
     );
+  }
 }
 function openSettings() {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
@@ -277,7 +284,10 @@ function startReader() {
   }
   reader = new StateReader(discoverStates(settings.statesPath));
   reader.on('state', (next) => {
+    const before = liveWarning(state.live);
+    const warning = liveWarning(next.live);
     state = next;
+    if (before?.code !== warning?.code || before?.message !== warning?.message) menu();
     const id = next.match?.gameId || null;
     if (id !== lastMatchId) {
       lastMatchId = id;
@@ -288,12 +298,7 @@ function startReader() {
     broadcast();
   });
   if (!reader.directory) {
-    state = {
-      status: 'waiting',
-      message: 'Snap folder not found. Select it in Settings.',
-      match: null,
-      decks: [],
-    };
+    state = reader.state;
     broadcast();
   }
   reader.start();
@@ -352,7 +357,9 @@ async function monitor() {
   visibility();
   broadcast();
   menu();
-  if (!reader?.directory && !demo) startReader();
+  // Without a folder the live worker keeps reading the game. Restart only once
+  // a folder can be found.
+  if (!demo && !reader?.directory && discoverStates(settings.statesPath)) startReader();
   timer = setTimeout(monitor, 2000);
 }
 async function monitorFocus() {

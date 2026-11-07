@@ -4,6 +4,9 @@ const { EventEmitter } = require('node:events');
 const { Worker } = require('node:worker_threads');
 const { parseSnapshot, readDecks } = require('../core/snapshot.cjs');
 const { Tracker } = require('../core/tracker.cjs');
+const UNSUPPORTED_MESSAGE =
+  'Unsupported Marvel Snap build. Live tracking is off until Snapper is updated.';
+const BLOCKED = ['unsupported', 'denied'];
 const readJson = async (file) =>
   JSON.parse((await fs.readFile(file, 'utf8')).replace(/^\uFEFF/, ''));
 class StateReader extends EventEmitter {
@@ -17,12 +20,52 @@ class StateReader extends EventEmitter {
     this.startedAt = Date.now();
     this.retiredGames = new Set();
     this.runId = 0;
+    // Last report from the live worker: null until the first message and on
+    // platforms without a live reader.
+    this.liveStatus = null;
+    this.baseMessage = directory
+      ? 'Waiting for Marvel Snap files'
+      : 'Snap folder not found. Select it in Settings.';
     this.state = {
       status: 'waiting',
-      message: 'Waiting for Marvel Snap files',
+      message: this.baseMessage,
       match: null,
       decks: [],
+      live: null,
     };
+  }
+  // Unsupported builds and denied access are not transient. A blocked live
+  // reader is the most actionable reason, so its message replaces the file
+  // messages (and file errors) instead of staying silent.
+  liveMessage() {
+    const live = this.liveStatus;
+    return live?.ok === false && BLOCKED.includes(live.code) ? live.message : null;
+  }
+  emitState(next) {
+    this.baseMessage = next.message;
+    this.state = {
+      ...next,
+      message: this.liveMessage() ?? next.message,
+      live: this.liveStatus,
+    };
+    this.emit('state', this.state);
+  }
+  setLiveStatus(result) {
+    const old = this.liveStatus;
+    // The message is display-ready. Transient codes carry text that nothing
+    // shows, so only a blocked reader's message counts as a change.
+    this.liveStatus = result.ok
+      ? { ok: true }
+      : {
+          ok: false,
+          code: result.code,
+          message: result.code === 'unsupported' ? UNSUPPORTED_MESSAGE : result.message,
+        };
+    return (
+      old?.ok !== this.liveStatus.ok ||
+      old?.code !== this.liveStatus.code ||
+      (BLOCKED.includes(this.liveStatus.code) && old?.message !== this.liveStatus.message)
+    );
   }
   async readCached(name) {
     const file = path.join(this.directory, name + '.json');
@@ -72,27 +115,25 @@ class StateReader extends EventEmitter {
             ? parsed.gameId === this.state.match?.gameId
             : game.mtime >= this.startedAt);
         const match = eligible ? this.updateMatch(parsed) : this.state.match;
-        this.state = {
+        this.emitState({
           status: match ? 'snapshot' : 'waiting',
           message: match ? 'Latest state saved by Snap' : 'Waiting for a match',
           updatedAt: game.mtime,
           match,
           decks,
           selectedDeck: selected,
-        };
-        this.emit('state', this.state);
+        });
       }
     } catch (error) {
       if (runId !== this.runId) return;
-      this.state = {
+      this.emitState({
         ...this.state,
         status: 'error',
         message:
           error.code === 'ENOENT'
             ? 'GameState.json not found. Check the folder.'
             : 'Snap is writing data or the file is invalid. Retrying.',
-      };
-      this.emit('state', this.state);
+      });
     }
   }
   updateMatch(parsed) {
@@ -120,24 +161,34 @@ class StateReader extends EventEmitter {
       const gameId = this.live.raw?.RemoteGame?.GameState?.Id;
       const changingMatch = gameId && gameId !== this.state.match?.gameId;
       if (changingMatch) this.tracker.reset();
-      this.state = {
+      this.emitState({
         ...this.state,
         status: 'error',
         message: 'Syncing match. Retrying…',
         match: changingMatch ? null : this.state.match,
-      };
-      this.emit('state', this.state);
+      });
       return;
     }
-    this.state = {
+    this.emitState({
       status: this.live.lobby ? 'lobby' : 'live',
       message: this.live.lobby ? 'In the lobby' : match ? 'Live game data' : 'Waiting for a match',
       updatedAt: this.live.updatedAt,
       match,
       decks: this.decks || [],
       selectedDeck: this.selected || null,
-    };
-    this.emit('state', this.state);
+    });
+  }
+  handleLive(result) {
+    this.live = result;
+    const changed = this.setLiveStatus(result);
+    if (result.ok) this.publishLive();
+    else if (['live', 'lobby'].includes(this.state.status))
+      this.emitState({
+        ...this.state,
+        status: 'error',
+        message: 'Reading interrupted. Retrying.',
+      });
+    else if (changed) this.emitState({ ...this.state, message: this.baseMessage });
   }
   start() {
     if (!this.stopped) return;
@@ -151,27 +202,21 @@ class StateReader extends EventEmitter {
         .replace(/app\.asar([/\\])/, 'app.asar.unpacked$1');
       this.worker = new Worker(workerPath);
       this.worker.on('message', (result) => {
-        if (runId !== this.runId) return;
-        this.live = result;
-        if (result.ok) this.publishLive();
-        else if (['live', 'lobby'].includes(this.state.status)) {
-          this.state = {
-            ...this.state,
-            status: 'error',
-            message: 'Reading interrupted. Retrying.',
-          };
-          this.emit('state', this.state);
-        }
+        if (runId === this.runId) this.handleLive(result);
       });
       this.worker.on('error', () => {
         if (runId !== this.runId) return;
         this.live = null;
-        this.state = {
+        this.setLiveStatus({
+          ok: false,
+          code: 'retrying',
+          message: 'Live reading unavailable. Waiting to reconnect.',
+        });
+        this.emitState({
           ...this.state,
           status: 'error',
-          message: 'Live reading unavailable. Waiting to reconnect.',
-        };
-        this.emit('state', this.state);
+          message: this.liveStatus.message,
+        });
       });
     }
     const tick = async () => {

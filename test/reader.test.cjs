@@ -242,3 +242,99 @@ test(
     assert.equal(reader.state.match.opponent.length, 1);
   },
 );
+test('an unsupported live build is reported once and cleared by the next live read', () => {
+  const reader = new StateReader(null),
+    states = [];
+  reader.on('state', (state) => states.push(state));
+  assert.equal(reader.state.status, 'waiting');
+  assert.equal(reader.state.live, null);
+  const unsupported = { ok: false, code: 'unsupported', message: 'Unsupported Marvel Snap build' };
+  reader.handleLive(unsupported);
+  assert.equal(states.length, 1);
+  assert.equal(states[0].status, 'waiting');
+  assert.equal(states[0].live.ok, false);
+  assert.equal(states[0].live.code, 'unsupported');
+  assert.equal(
+    states[0].message,
+    'Unsupported Marvel Snap build. Live tracking is off until Snapper is updated.',
+  );
+  reader.handleLive({ ...unsupported });
+  assert.equal(states.length, 1);
+  reader.handleLive({ ok: false, code: 'waiting-game', message: 'Waiting for Marvel Snap' });
+  assert.equal(states.length, 2);
+  assert.equal(states[1].live.code, 'waiting-game');
+  assert.equal(states[1].message, 'Snap folder not found. Select it in Settings.');
+  reader.handleLive(unsupported);
+  assert.equal(states.length, 3);
+  reader.handleLive({ ok: true, lobby: true, raw: null, updatedAt: Date.now() });
+  const last = states.at(-1);
+  assert.equal(states.length, 4);
+  assert.equal(last.status, 'lobby');
+  assert.deepEqual(last.live, { ok: true });
+  assert.equal(last.message, 'In the lobby');
+});
+test('denied access keeps its own message over the saved-file messages', () => {
+  const reader = new StateReader(null);
+  reader.handleLive({
+    ok: false,
+    code: 'denied',
+    message: 'Linux does not allow reading Snap state',
+  });
+  assert.equal(reader.state.live.code, 'denied');
+  assert.equal(reader.state.message, 'Linux does not allow reading Snap state');
+  reader.handleLive({ ok: false, code: 'retrying', message: 'Reading' });
+  assert.equal(reader.state.live.code, 'retrying');
+  assert.equal(reader.state.message, 'Snap folder not found. Select it in Settings.');
+});
+const UNSUPPORTED = 'Unsupported Marvel Snap build. Live tracking is off until Snapper is updated.';
+test('without a Snap folder the reader keeps the folder message after live reports', () => {
+  const reader = new StateReader(null);
+  assert.equal(reader.state.message, 'Snap folder not found. Select it in Settings.');
+  reader.handleLive({ ok: false, code: 'waiting-game', message: 'Waiting for Marvel Snap' });
+  assert.equal(reader.state.message, 'Snap folder not found. Select it in Settings.');
+  assert.equal(reader.state.live.code, 'waiting-game');
+  reader.handleLive({ ok: false, code: 'unsupported', message: 'Unsupported Marvel Snap build' });
+  assert.equal(reader.state.message, UNSUPPORTED);
+  reader.handleLive({ ok: false, code: 'waiting-game', message: 'Waiting for Marvel Snap' });
+  assert.equal(reader.state.message, 'Snap folder not found. Select it in Settings.');
+});
+test('a failed live read after a live or lobby read reports the interruption', () => {
+  const reader = new StateReader(null);
+  reader.handleLive({ ok: true, lobby: true, raw: null, updatedAt: Date.now() });
+  assert.equal(reader.state.status, 'lobby');
+  reader.handleLive({ ok: false, code: 'retrying', message: 'Game changing' });
+  assert.equal(reader.state.status, 'error');
+  assert.equal(reader.state.message, 'Reading interrupted. Retrying.');
+  assert.equal(reader.state.live.code, 'retrying');
+});
+test('transient retrying text changes do not emit', () => {
+  const reader = new StateReader(null),
+    states = [];
+  reader.handleLive({ ok: false, code: 'retrying', message: 'Game changing' });
+  reader.on('state', (state) => states.push(state));
+  reader.handleLive({ ok: false, code: 'retrying', message: 'Players changing' });
+  assert.equal(states.length, 0);
+  reader.handleLive({ ok: false, code: 'waiting-game', message: 'Waiting for Marvel Snap' });
+  assert.equal(states.length, 1);
+});
+test('the unsupported message survives file polls and file errors', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'snapper-unsupported-'));
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const reader = new StateReader(dir);
+  await reader.poll();
+  assert.equal(reader.state.status, 'error');
+  assert.equal(reader.state.message, 'GameState.json not found. Check the folder.');
+  reader.handleLive({ ok: false, code: 'unsupported', message: 'Unsupported Marvel Snap build' });
+  assert.equal(reader.state.status, 'error');
+  assert.equal(reader.state.message, UNSUPPORTED);
+  await reader.poll();
+  assert.equal(reader.state.status, 'error');
+  assert.equal(reader.state.message, UNSUPPORTED);
+  await fs.writeFile(path.join(dir, 'GameState.json'), '{"RemoteGame":{}}');
+  await reader.poll();
+  assert.equal(reader.state.status, 'waiting');
+  assert.equal(reader.state.message, UNSUPPORTED);
+  assert.equal(reader.state.live.code, 'unsupported');
+  reader.handleLive({ ok: false, code: 'waiting-game', message: 'Waiting for Marvel Snap' });
+  assert.equal(reader.state.message, 'Waiting for a match');
+});
