@@ -2,6 +2,8 @@ const { test } = require('node:test'),
   assert = require('node:assert/strict');
 const { abilityFromPage, CardInfo, costFromPage } = require('../src/services/card-info.cjs');
 const { visibleMenu } = require('../src/services/avatar-menu.cjs');
+const { PROFILE } = require('../src/services/memory.cjs');
+const U = PROFILE.avatar.unity;
 test('ability parser reads the current block, strips markup and decodes entities', () => {
   const html =
     '<p class="leading-relaxed text-snap-gray-100"><b>On Reveal:</b> A &amp; B<br>Power &#43;2.</p><table><p>Old ability</p></table>';
@@ -20,9 +22,9 @@ test('avatar menu reads the active hierarchy flag and rejects stale native objec
   const values = new Map([
     [100, 200],
     [116, 300],
-    [300, 1000 + 0x1b697f8],
-    [332, 400],
-    [400, 1000 + 0x1b267f0],
+    [300, 1000 + U.monoBehaviourVtable],
+    [300 + U.nativeGameObject, 400],
+    [400, 1000 + U.gameObjectVtable],
   ]);
   let active = 0;
   const mem = { ptr: (a) => values.get(a) || 0, read: () => Buffer.from([active]) };

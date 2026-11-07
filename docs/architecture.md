@@ -48,7 +48,8 @@ not merely to meet a line-count rule.
 - Add an IPC route through the secure router, specify its roles and validate its
   payload. Do not expose arbitrary channel names through the preload bridge.
 - A game update requires a reviewed reader profile and matching binary hash.
-  Do not relax the hash check to make an unknown build load.
+  Derive and apply one as described in `docs/reader-profile.md`. Do not relax
+  the hash check to make an unknown build load.
 - Keep ability emphasis as text nodes with inline elements. Never render remote
   HTML, even when the source is a known card site.
 

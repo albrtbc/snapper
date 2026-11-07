@@ -2,8 +2,9 @@
 // This reader runs separately from card tracking, so discovery never stalls it.
 const fs = require('node:fs'),
   crypto = require('node:crypto');
-const { ProcessMemory, PROFILE } = require('./memory.cjs');
-const UNITY_HASH = '01f87d6a53090eda35a5f5adc74852666b80aa71d52e016634ca7992ee8f5829';
+const { ProcessMemory, PROFILE, profileFor, LAYOUT } = require('./memory.cjs');
+const sha256File = (file) =>
+  crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 function mapsFor(pid) {
   return fs
     .readFileSync(`/proc/${pid}/maps`, 'utf8')
@@ -20,17 +21,18 @@ function mapsFor(pid) {
       };
     });
 }
-function visibleMenu(mem, object, klass, unity) {
+function visibleMenu(mem, object, klass, unity, profile = PROFILE) {
+  const u = profile.avatar.unity;
   if (mem.ptr(object) !== klass) return null;
-  const native = mem.ptr(object + 16);
+  const native = mem.ptr(object + LAYOUT.unityObject.cachedPtr);
   if (!native) return null;
-  // Concrete native MonoBehaviour and GameObject vtables, hash pinned below.
-  if (mem.ptr(native) !== unity + 0x1b697f8) return null;
-  const gameObject = mem.ptr(native + 0x20);
-  if (!gameObject || mem.ptr(gameObject) !== unity + 0x1b267f0) return null;
+  // Concrete native MonoBehaviour and GameObject vtables, hash pinned in the profile.
+  if (mem.ptr(native) !== unity + u.monoBehaviourVtable) return null;
+  const gameObject = mem.ptr(native + u.nativeGameObject);
+  if (!gameObject || mem.ptr(gameObject) !== unity + u.gameObjectVtable) return null;
   // AvatarMenuPanel.IsVisible -> gameObject.activeInHierarchy. Unity's getter
-  // reads +0x47. 0xff is an uncomputed cache; do not call the getter or write it.
-  const active = mem.read(gameObject + 0x47, 1)[0];
+  // reads this byte. 0xff is an uncomputed cache; do not call the getter or write it.
+  const active = mem.read(gameObject + u.activeInHierarchy, 1)[0];
   return active === 0 ? false : active === 1 ? true : null;
 }
 class AvatarMenus {
@@ -41,27 +43,27 @@ class AvatarMenus {
     const assembly = maps.find((m) => m.offset === 0 && m.file.endsWith('/GameAssembly.dll'));
     const unity = maps.find((m) => m.offset === 0 && m.file.endsWith('/UnityPlayer.dll'));
     if (!assembly || !unity) throw Error('Waiting for game modules');
-    for (const [file, expected] of [
-      [assembly.file, PROFILE.sha256],
-      [unity.file, UNITY_HASH],
-    ]) {
-      if (crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex') !== expected)
-        throw Error('Unsupported avatar-menu build');
+    let profile;
+    try {
+      profile = profileFor(sha256File(assembly.file));
+    } catch (error) {
+      if (error.code !== 'SNAP_UNSUPPORTED') throw error;
+      throw Error('Unsupported avatar-menu build');
     }
+    if (sha256File(unity.file) !== profile.unitySha256)
+      throw Error('Unsupported avatar-menu build');
+    this.profile = profile;
     this.base = assembly.start;
     this.unity = unity.start;
     this.mem = new ProcessMemory(pid);
   }
   discover() {
-    const mem = this.mem;
+    const mem = this.mem,
+      panel = this.profile.avatar.panel;
     let klass = 0;
     // Init resolves these callback MethodInfos before either menu is opened.
     // The nested type fallback may only initialize when graveyard counts load.
-    for (const [slot, offset] of [
-      [97866968, 0x20],
-      [97865720, 0x20],
-      [98253408, 0x50],
-    ]) {
+    for (const [slot, offset] of this.profile.avatar.slots) {
       try {
         const metadata = mem.ptr(this.base + slot);
         if (metadata < 65536 || metadata % 8) continue;
@@ -99,10 +101,10 @@ class AvatarMenus {
           const object = start + i;
           if (object % 8) continue;
           try {
-            if (visibleMenu(mem, object, klass, this.unity) === null) continue;
+            if (visibleMenu(mem, object, klass, this.unity, this.profile) === null) continue;
             if (
-              mem.className(mem.ptr(object + 0x138)) !== 'GameObject' ||
-              !mem.className(mem.ptr(object + 0xd8)).includes('TextMeshPro')
+              mem.className(mem.ptr(object + panel.settingsObject)) !== 'GameObject' ||
+              !mem.className(mem.ptr(object + panel.cardsInHand)).includes('TextMeshPro')
             )
               continue;
             found.push(object);
@@ -116,7 +118,7 @@ class AvatarMenus {
   read() {
     const values = this.objects.map((object) => {
       try {
-        return visibleMenu(this.mem, object, this.klass, this.unity);
+        return visibleMenu(this.mem, object, this.klass, this.unity, this.profile);
       } catch {
         return null;
       }

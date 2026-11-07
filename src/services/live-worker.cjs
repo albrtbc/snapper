@@ -17,7 +17,11 @@ function tick() {
       nextAttach = 0;
     }
     if (!pid) {
-      parentPort.postMessage({ ok: false, message: 'Waiting for Marvel Snap' });
+      parentPort.postMessage({
+        ok: false,
+        code: 'waiting-game',
+        message: 'Waiting for Marvel Snap',
+      });
       return;
     }
     if (!connection) {
@@ -25,7 +29,12 @@ function tick() {
       nextAttach = Date.now() + 15000;
       connection = attach(pid);
     }
-    const result = decodeGame(connection.mem, connection.manager, connection.managerClass);
+    const result = decodeGame(
+      connection.mem,
+      connection.manager,
+      connection.managerClass,
+      connection.profile,
+    );
     failures = 0;
     parentPort.postMessage({ ok: true, ...result, updatedAt: Date.now() });
   } catch (error) {
@@ -36,9 +45,16 @@ function tick() {
       disconnect();
       failures = 0;
     }
+    const code =
+      error.code === 'SNAP_UNSUPPORTED'
+        ? 'unsupported'
+        : error.code === 'EACCES'
+          ? 'denied'
+          : 'retrying';
     parentPort.postMessage({
       ok: false,
-      message: error.code === 'EACCES' ? 'Linux does not allow reading Snap state' : error.message,
+      code,
+      message: code === 'denied' ? 'Linux does not allow reading Snap state' : error.message,
     });
   } finally {
     setTimeout(tick, 350);
