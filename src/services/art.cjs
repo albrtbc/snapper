@@ -6,6 +6,7 @@ const { fetchBytes, fetchPage } = require('./http.cjs');
 const { TaskQueue } = require('./task-queue.cjs');
 const SAFE_ID = /^[A-Za-z0-9_]{1,100}$/;
 const MAX_BYTES = 3000000;
+const MAX_FAILURES = 512;
 // Snap.fan serves the generic grey 0/0 SNAP back (18,248 B) for cards without art.
 const KNOWN_PLACEHOLDERS = new Set([
   '3d389018dc5376ac3a1b8439770c42006f8c6609bed2953c4477eb076a1e59e8',
@@ -30,6 +31,7 @@ class CardArt {
       placeholderHashes = KNOWN_PLACEHOLDERS,
       realTtl = 7 * 24 * 3600 * 1000,
       placeholderTtl = 6 * 3600 * 1000,
+      retryDelay = 10 * 60 * 1000,
       now = Date.now,
     } = {},
   ) {
@@ -37,7 +39,9 @@ class CardArt {
     this.rules = { placeholderBytes, placeholderHashes };
     this.realTtl = realTtl;
     this.placeholderTtl = placeholderTtl;
+    this.retryDelay = retryDelay;
     this.now = now;
+    this.failedAt = new Map();
     this.pending = new Map();
     this.refreshing = new Map();
     this.queue = new TaskQueue();
@@ -126,8 +130,9 @@ class CardArt {
     return { record, version, placeholder: record.placeholder };
   }
   due(cached) {
+    // A checked time in the future (the clock stepped back) counts as due.
     const age = this.now() - Date.parse(cached.record.checked);
-    return !(age < (cached.placeholder ? this.placeholderTtl : this.realTtl));
+    return !(age >= 0 && age < (cached.placeholder ? this.placeholderTtl : this.realTtl));
   }
   // Downloads and validates one image, then stores it and its record atomically.
   async download(key, source, page) {
@@ -154,6 +159,42 @@ class CardArt {
     });
     return { placeholder, version: sourceVersion(source) };
   }
+  // In-memory backoff: the renderer asks again for every null result, so after a failed
+  // check the network is left alone for retryDelay and the cache is used as if offline.
+  backedOff(key) {
+    return this.withinDelay(this.failedAt.get(key));
+  }
+  // A negative elapsed time (the clock stepped back) counts as expired.
+  withinDelay(failedAt) {
+    const elapsed = this.now() - (failedAt ?? -Infinity);
+    return elapsed >= 0 && elapsed < this.retryDelay;
+  }
+  // Renderer-supplied ids must not grow the map without limit: drop expired entries first,
+  // then the oldest ones.
+  noteFailure(key) {
+    this.failedAt.delete(key);
+    if (this.failedAt.size >= MAX_FAILURES) {
+      for (const [other, at] of this.failedAt)
+        if (!this.withinDelay(at)) this.failedAt.delete(other);
+      while (this.failedAt.size >= MAX_FAILURES)
+        this.failedAt.delete(this.failedAt.keys().next().value);
+    }
+    this.failedAt.set(key, this.now());
+  }
+  async attempt(queue, key, task) {
+    let started = false;
+    try {
+      const result = await queue.run(() => {
+        started = true;
+        return task();
+      });
+      this.failedAt.delete(key);
+      return result;
+    } catch (error) {
+      if (started) this.noteFailure(key);
+      throw error;
+    }
+  }
   async load(id, key) {
     await this.refreshing.get(key)?.catch(() => {});
     const cached = await this.inspect(key);
@@ -161,8 +202,9 @@ class CardArt {
       return cached.placeholder ? null : this.imageUrl(key, cached.version);
     // Offline reuse applies to real images only; a placeholder is never served.
     const fallback = cached && !cached.placeholder ? this.imageUrl(key, cached.version) : null;
+    if (this.backedOff(key)) return fallback;
     try {
-      return await this.queue.run(async () => {
+      return await this.attempt(this.queue, key, async () => {
         const page = `https://snap.fan/cards/${encodeURIComponent(id)}/${key === id ? '' : encodeURIComponent(key) + '/'}`;
         const html = await fetchPage(page);
         const match = html.match(
@@ -199,9 +241,13 @@ class CardArt {
       try {
         const cached = await this.inspect(key);
         const same = cached?.record.source === imageUrl && (await this.recheck(key, cached));
-        if (same) return { status: 'unchanged', placeholder: same.placeholder };
+        if (same) {
+          this.failedAt.delete(key);
+          return { status: 'unchanged', placeholder: same.placeholder };
+        }
+        if (this.backedOff(key)) return { status: 'failed' };
         // Its own queue: a bulk update must not delay on-screen art behind its queued jobs.
-        const result = await this.bulkQueue.run(() =>
+        const result = await this.attempt(this.bulkQueue, key, () =>
           this.download(key, imageUrl, `https://snap.fan/cards/${key}/`),
         );
         return { status: result.placeholder ? 'placeholder' : 'downloaded' };

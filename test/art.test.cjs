@@ -67,6 +67,7 @@ async function fixture(t, options = {}) {
     site.requests.filter((url) => (kind === 'image') === url.endsWith('.webp')).length;
   t.mock.method(global, 'fetch', async (url) => {
     site.requests.push(url);
+    if (site.gate) await site.gate;
     if (site.offline) throw new TypeError('fetch failed');
     const image = url.endsWith('.webp'),
       body = (image ? site.images : site.pages).get(url);
@@ -237,8 +238,10 @@ test('a failed re-check keeps serving real cached art and never throws', async (
   assert.equal(await site.art.get('Nothing'), null);
   // The page loses its art, or the new image is broken: same outcome.
   site.offline = false;
+  site.advance(11 * 60 * 1000);
   site.pages.set('https://snap.fan/cards/Venom/', '<p>no art</p>');
   assert.equal(await site.art.get('Venom'), venom);
+  site.advance(11 * 60 * 1000);
   site.pages.set(
     'https://snap.fan/cards/Venom/',
     `<img src="${ASSETS}Venom-ffffffffffffffff.webp">`,
@@ -371,4 +374,146 @@ test('atomic writes leave no temporary files', async (t) => {
   await site.art.get('Venom');
   const names = await fs.readdir(site.directory);
   assert.deepEqual(names.sort(), ['Venom.source.json', 'Venom.webp']);
+});
+
+const MINUTE = 60 * 1000;
+
+test('a failed check backs off: no further fetches until retryDelay, and cached real art is served', async (t) => {
+  const site = await fixture(t);
+  site.card('Venom', 'aaaaaaaaaaaaaaaa', webp(REAL));
+  site.card('Mordred', 'bbbbbbbbbbbbbbbb', webp(SMALL));
+  const venom = await site.art.get('Venom');
+  await site.art.get('Mordred');
+  site.advance(8 * DAY);
+  site.offline = true;
+  site.requests.length = 0;
+  assert.equal(await site.art.get('Venom'), venom);
+  assert.equal(await site.art.get('Mordred'), null);
+  assert.equal(site.requests.length, 2);
+  for (let i = 0; i < 5; i++) {
+    site.advance(MINUTE);
+    assert.equal(await site.art.get('Venom'), venom);
+    assert.equal(await site.art.get('Mordred'), null);
+  }
+  assert.equal(site.requests.length, 2);
+  // After retryDelay the next get() tries again, and a failure restarts the backoff.
+  site.advance(5 * MINUTE);
+  assert.equal(await site.art.get('Venom'), venom);
+  assert.equal(site.requests.length, 3);
+  assert.equal(await site.art.get('Venom'), venom);
+  assert.equal(site.requests.length, 3);
+  // A success clears the backoff: the page is back and the art changed.
+  site.offline = false;
+  site.advance(11 * MINUTE);
+  site.card('Venom', '0123456789abcdef', webp(REAL, 'n'));
+  assert.match(await site.art.get('Venom'), /\/Venom\.webp\?v=0123456789ab$/);
+  assert.equal(site.art.failedAt.has('Venom'), false);
+});
+
+test('a card with no file and a failing page makes one fetch, not one per get', async (t) => {
+  const site = await fixture(t);
+  for (let i = 0; i < 4; i++) assert.equal(await site.art.get('Nothing'), null);
+  assert.equal(site.requests.length, 1);
+  site.advance(10 * MINUTE);
+  assert.equal(await site.art.get('Nothing'), null);
+  assert.equal(site.requests.length, 2);
+  // The page works again after the backoff, and a success clears it.
+  site.advance(10 * MINUTE);
+  site.card('Nothing', 'aaaaaaaaaaaaaaaa', webp(REAL));
+  assert.match(await site.art.get('Nothing'), /\/Nothing\.webp\?v=aaaaaaaaaaaa$/);
+  assert.equal(site.art.failedAt.has('Nothing'), false);
+});
+
+test('a failed variant backs off its own key only, and the base still loads', async (t) => {
+  const site = await fixture(t);
+  site.card('Venom', 'aaaaaaaaaaaaaaaa', webp(REAL));
+  const base = await site.art.get('Venom');
+  assert.equal(await site.art.get('Venom', 'Venom_99'), base);
+  assert.equal(site.art.failedAt.has('Venom_99'), true);
+  assert.equal(site.art.failedAt.has('Venom'), false);
+  const count = site.requests.length;
+  assert.equal(await site.art.get('Venom', 'Venom_99'), base);
+  assert.equal(site.requests.length, count);
+});
+
+test('refresh makes no fetch during a backoff, and an unchanged URL clears it', async (t) => {
+  const site = await fixture(t);
+  const url = ASSETS + 'Venom-aaaaaaaaaaaaaaaa.webp';
+  site.images.set(url, webp(REAL));
+  // A failed get() (no page) starts the backoff for this key.
+  assert.equal(await site.art.get('Venom'), null);
+  site.requests.length = 0;
+  assert.deepEqual(await site.art.refresh('Venom', url), { status: 'failed' });
+  assert.equal(site.requests.length, 0);
+  site.advance(10 * MINUTE);
+  assert.deepEqual(await site.art.refresh('Venom', url), { status: 'downloaded' });
+  assert.equal(site.requests.length, 1);
+  // A failed refresh starts the backoff too, and get() then skips the network.
+  site.advance(DAY * 8);
+  site.offline = true;
+  const other = ASSETS + 'Venom-bbbbbbbbbbbbbbbb.webp';
+  assert.deepEqual(await site.art.refresh('Venom', other), { status: 'failed' });
+  assert.equal(site.requests.length, 2);
+  assert.deepEqual(await site.art.refresh('Venom', other), { status: 'failed' });
+  assert.match(await site.art.get('Venom'), /\/Venom\.webp\?v=aaaaaaaaaaaa$/);
+  assert.equal(site.requests.length, 2);
+  // The unchanged URL needs no network and clears the backoff.
+  assert.deepEqual(await site.art.refresh('Venom', url), {
+    status: 'unchanged',
+    placeholder: false,
+  });
+  assert.equal(site.art.failedAt.has('Venom'), false);
+});
+
+test('the backoff map is bounded', async (t) => {
+  const site = await fixture(t);
+  site.offline = true;
+  for (let i = 0; i < 600; i++) assert.equal(await site.art.get('Card' + i), null);
+  assert.equal(site.art.failedAt.size, 512);
+  assert.equal(site.art.failedAt.has('Card0'), false);
+  assert.equal(site.art.failedAt.has('Card599'), true);
+  // Expired entries go first when the map is full.
+  site.advance(11 * MINUTE);
+  assert.equal(await site.art.get('Later'), null);
+  assert.deepEqual([...site.art.failedAt.keys()], ['Later']);
+});
+
+test('a backward clock step does not lengthen the backoff or hide a due check', async (t) => {
+  const site = await fixture(t);
+  site.offline = true;
+  assert.equal(await site.art.get('Nothing'), null);
+  assert.equal(site.requests.length, 1);
+  site.advance(-HOUR);
+  assert.equal(await site.art.get('Nothing'), null);
+  assert.equal(site.requests.length, 2);
+  // A record checked in the future is due.
+  site.offline = false;
+  site.card('Venom', 'aaaaaaaaaaaaaaaa', webp(REAL));
+  const venom = await site.art.get('Venom');
+  site.requests.length = 0;
+  assert.equal(await site.art.get('Venom'), venom);
+  assert.equal(site.requests.length, 0);
+  site.advance(-DAY);
+  assert.equal(await site.art.get('Venom'), venom);
+  assert.equal(site.count('page'), 1);
+  assert.equal((await site.record('Venom')).checked, '2026-11-09T11:00:00.000Z');
+});
+
+test('jobs rejected by a full queue are not backed off', async (t) => {
+  const site = await fixture(t);
+  let release;
+  site.gate = new Promise((resolve) => (release = resolve));
+  site.offline = true;
+  const keys = Array.from({ length: 70 }, (_, i) => 'Card' + i);
+  const results = Promise.all(keys.map((key) => site.art.get(key)));
+  while (site.requests.length < 3) await new Promise((resolve) => setImmediate(resolve));
+  release();
+  assert.deepEqual(await results, Array(70).fill(null));
+  // 3 running and 64 waiting were accepted and failed; the other 3 were rejected.
+  assert.equal(site.requests.length, 67);
+  const rejected = keys.filter((key) => !site.art.failedAt.has(key));
+  assert.equal(rejected.length, 3);
+  site.gate = null;
+  assert.equal(await site.art.get(rejected[0]), null);
+  assert.equal(site.requests.length, 68);
 });
