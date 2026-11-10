@@ -71,7 +71,9 @@ Only your deck appears in the lobby. The opponent panel appears during a match a
 - Show only the English ability description on hover or keyboard focus, with labels such as **On Reveal:** and **When Discarded:** in bold. Cache descriptions for 24 hours and reuse them offline.
 - Optionally use each card's equipped variant through **Use in-game variants**, disabled by default. Unavailable variants fall back to base art. Finishes, borders and animations are not reproduced.
 
-Art comes from Snap.fan and is cached locally. Missing images retain a text fallback. Button tooltips render inside the overlay so native window stacking cannot hide them behind the panel.
+Art comes from Snap.fan and is cached locally. Missing images retain a text fallback. Button tooltips render inside the overlay so native window stacking cannot hide them behind the panel. New cards often have only a placeholder on Snap.fan, such as a grey 0/0 card back or a work-in-progress tile. Snapper detects these, shows the card's name, cost and power instead and switches to the real art once Snap.fan publishes it. A cached image is checked again after 7 days, or after 6 hours while it is still a placeholder.
+
+**Update card pool** in Settings reads Snap.fan's list of released and upcoming cards and downloads the base art that is new or changed, so new cards have their images before they appear in a match. Snapper does the same in the background 15 seconds after launch when images are on and no update has run in the past week, including the first launch. On a new install, the first update downloads the art of every listed card (about 760 cards, tens of MB); an existing cache only gains the missing and changed images. Developers can run `npm run cards:update` to do it outside the app and list the cards that still have no real art. The list pages carry no card ids from your games and no account data; the result is stored locally as `card-pool.json`.
 
 An unobserved own-deck card stays in color, but is not guaranteed to remain in the deck. It may have been stolen, transformed or removed without public information. Counts come from game zones; hidden identities are not inferred. The opponent's full result deck is never used.
 
@@ -91,7 +93,7 @@ steamapps/compatdata/1997040/pfx/drive_c/users/steamuser/AppData/LocalLow/Second
 
 Snapper reads `GameState.json`, `CollectionState.json` and `PlayState.json`, resolving Newtonsoft `$id` and `$ref` references. Settings and cached assets normally live in `~/.config/Snapper/`.
 
-Only artwork and ability retrieval contact `snap.fan` and `game-assets.snap.fan`, using card identifiers. Accounts, matches and collections are not uploaded. Hidden opponent identities and stats are filtered before reading. Session history stays in memory. Do not publish raw game JSON: it contains account identifiers and other personal data. Tests use synthetic fixtures. See [SECURITY.md](SECURITY.md) for trust boundaries and reporting instructions.
+Only artwork, ability and card-pool retrieval contact `snap.fan` and `game-assets.snap.fan`. Card pages and images are requested by card identifier; the two card-list pages are requested without any identifier. Accounts, matches and collections are not uploaded. Hidden opponent identities and stats are filtered before reading. Session history stays in memory. Do not publish raw game JSON: it contains account identifiers and other personal data. Tests use synthetic fixtures. See [SECURITY.md](SECURITY.md) for trust boundaries and reporting instructions.
 
 ## Development
 

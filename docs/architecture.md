@@ -18,6 +18,24 @@ Card artwork and ability text have separate disk caches. Both use the same
 bounded HTTP reader and queue implementation. No game-state data is sent to
 these hosts.
 
+`card-pool.cjs` adds a third local cache, `card-pool.json`: the card list read
+from two Snap.fan list pages, with each card's base image URL. Updating it hands
+every listed image to `CardArt.refresh()`. The art service treats images below
+24,000 bytes or with a known hash as placeholders, so the overlay shows the text
+fallback, and checks cached art again after 7 days (6 hours for placeholders).
+It has two queues: on-screen art requests keep the 3-wide queue, and the bulk
+refresh uses its own 2-wide queue, so queued bulk downloads never hold up other
+visible cards; a card being refreshed waits for that refresh. After a failed
+check, the same card is not checked again for 10 minutes, and on-screen lookups
+meanwhile use the cached real art or the text fallback.
+
+The Update card pool button reaches the main process through the settings-only
+`cards-update` route. The same update runs 15 seconds after launch when images
+are on and no update has run in the past 7 days, including the first launch.
+After a successful update the main process increments `artRevision` in the
+overlay state, and both renderers drop their image caches to show new art
+without a restart.
+
 ## Boundaries
 
 | Module                                | Responsibility                                                                |

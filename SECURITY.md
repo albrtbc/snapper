@@ -21,6 +21,11 @@ development version; there are no maintained older release branches.
 - The main process fetches only HTTPS pages and images from `snap.fan` and
   `game-assets.snap.fan`. Redirects are rejected. HTML is capped at 2 MiB and
   images at 3,000,000 bytes while streaming, including decompressed responses.
+  The card-list pages fall under the same HTML cap. They are parsed as data and
+  never executed. Card ids must match the safe-id pattern. The only URLs taken
+  from them are base image URLs on `game-assets.snap.fan` of the expected form,
+  and those are downloaded. Name, cost, power, type and release date are stored
+  in `card-pool.json` as plain data.
 - The Linux reader opens game memory read-only, verifies supported binary hashes
   and filters hidden opponent identities before reading their values. Saved
   state files are local, limited to 64 MiB each and never uploaded.
@@ -34,8 +39,13 @@ part of the trust boundary; keep dependencies current.
 
 No account service, telemetry or automatic update service is included. Artwork
 and ability requests disclose card identifiers and the user's network address
-to their hosting services. Cached assets and settings remain on disk after
-uninstalling the launcher.
+to their hosting services. Card-list requests are sent by the weekly startup
+update and by Update card pool; they disclose only the network address. After a
+successful check, cached art is re-checked at most every 7 days per image (6
+hours for placeholders). While Snapper runs, a failed check is not retried for
+10 minutes. The card pool update downloads new or changed base art for every
+listed card; on a new install, the first update downloads all of it. Cached
+assets and settings remain on disk after uninstalling the launcher.
 
 ## Release checks
 

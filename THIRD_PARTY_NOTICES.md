@@ -10,8 +10,9 @@ Marvel Snap card artwork and card text are owned by their respective rights
 holders, including Marvel and Second Dinner. Snapper retrieves these separately
 from Snap.fan and its asset host at runtime. They are not included in the source
 distribution. Their availability from a public server is not a redistribution
-license. Do not bundle the local artwork cache or live-game screenshots in a
-source release. Snapper is not affiliated with or endorsed by these companies.
+license. Do not bundle the local artwork cache, the local `card-pool.json` card
+list or live-game screenshots in a source release. Snapper is not affiliated
+with or endorsed by these companies.
 
 The application bundles Electron, which includes Chromium, Node.js and other
 components under their respective licenses. Keep Electron's `LICENSE.electron.txt`
