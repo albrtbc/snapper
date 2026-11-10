@@ -10,6 +10,7 @@
     "test": "node --test test/*.test.cjs",
     "check": "node scripts/check.cjs",
     "diagnose": "node scripts/diagnose.cjs",
+    "cards:update": "node scripts/update-cards.cjs",
     "pack": "electron-builder --dir",
     "dist": "electron-builder --linux AppImage --x64 --publish never",
     "setup": "install-electron",

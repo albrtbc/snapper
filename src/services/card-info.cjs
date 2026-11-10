@@ -3,23 +3,22 @@ const path = require('node:path');
 const { fetchPage } = require('./http.cjs');
 const { TaskQueue } = require('./task-queue.cjs');
 const SAFE_ID = /^[A-Za-z0-9_]{1,100}$/;
+const NAMED_ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+// One pass, so a decoded "&" never starts a second entity.
+function decodeEntities(text) {
+  return text.replace(/&(?:#(x[\da-f]+|\d+)|(amp|lt|gt|quot|apos|nbsp));/gi, (_, code, name) => {
+    if (name) return NAMED_ENTITIES[name.toLowerCase()];
+    const n = code[0].toLowerCase() === 'x' ? parseInt(code.slice(1), 16) : Number(code);
+    return n <= 0x10ffff ? String.fromCodePoint(n) : '';
+  });
+}
 function abilityFromPage(html) {
   // Current ability block, before the historical balance-change table.
   const raw = html.match(
     /<p\b[^>]*class="[^"]*leading-relaxed\s+text-snap-gray-100[^"]*"[^>]*>([\s\S]*?)<\/p>/i,
   )?.[1];
   if (raw === undefined) return null;
-  const text = raw
-    .replace(/<br\s*\/?\s*>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&#(x[\da-f]+|\d+);/gi, (_, code) => {
-      const n = code[0].toLowerCase() === 'x' ? parseInt(code.slice(1), 16) : Number(code);
-      return n <= 0x10ffff ? String.fromCodePoint(n) : '';
-    })
-    .replace(
-      /&(amp|lt|gt|quot|apos|nbsp);/g,
-      (_, name) => ({ amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' })[name],
-    )
+  const text = decodeEntities(raw.replace(/<br\s*\/?\s*>/gi, '\n').replace(/<[^>]*>/g, ''))
     .replace(/[ \t]+/g, ' ')
     .trim();
   return text && text.length < 4000 ? text : null;
@@ -73,4 +72,4 @@ class CardInfo {
     }
   }
 }
-module.exports = { CardInfo, abilityFromPage, costFromPage };
+module.exports = { CardInfo, abilityFromPage, costFromPage, decodeEntities };

@@ -365,7 +365,7 @@ test('refresh followed at once by get downloads the image once and scrapes no pa
   assert.equal(site.count('page'), 0);
 });
 
-test('temporary files are unique and none are left behind', async (t) => {
+test('atomic writes leave no temporary files', async (t) => {
   const site = await fixture(t);
   site.card('Venom', 'aaaaaaaaaaaaaaaa', webp(REAL));
   await site.art.get('Venom');
