@@ -61,6 +61,10 @@ not merely to meet a line-count rule.
 - Card origins and current owners are separate. A stolen opponent card belongs
   in both the rival's known deck and our Added section. Piles follow the current
   owner. Generated cards do not become evidence about an original deck.
+- A transform keeps the entity and changes its `CardDefId`. The tracker keeps
+  every identity an entity has shown: deck rows match the first one, so a
+  transformed deck card still fills its slot, and later identities appear as
+  Added or opponent rows. Never match deck rows on the current card alone.
 - The game ending does not leave its results screen. Only entering the lobby
   clears tracked cards. Old files cannot establish a live Linux match.
 - Add an IPC route through the secure router, specify its roles and validate its

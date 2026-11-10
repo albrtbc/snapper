@@ -290,7 +290,9 @@ test('variants come from the equipped deck and visible cards only', () => {
   entities[21].Revealed = true;
   entities[21].ArtVariantDefId = 'None';
   state = tracker.update(parseSnapshot(raw, decks[0]));
-  assert.equal(state.opponent[0].variantId, null);
+  // The same entity now shows Venom: a transform, so Morbius stays listed with its art.
+  assert.equal(state.opponent.find((c) => c.cardId === 'Venom').variantId, null);
+  assert.equal(state.opponent.find((c) => c.cardId === 'Morbius').variantId, 'Morbius_02');
 });
 test('incomplete or duplicated player roster during a second game is rejected without throwing', () => {
   for (const kind of ['duplicate', 'missing', 'unresolved', 'noLocalId']) {
@@ -346,4 +348,160 @@ test('opponent deck excludes generated cards and cards stolen from our deck', ()
   entities[90].Owner = { $ref: 'own' };
   state = tracker.update(parseSnapshot(raw, deck));
   assert.ok(state.added.some((c) => c.cardId === 'Rock'));
+});
+
+test('a transformed deck card keeps its deck slot out of the deck and its new card is added', () => {
+  const tracker = new Tracker(),
+    raw = fixture(),
+    card = raw.RemoteGame.GameState._entityIdToEntity[24];
+  card._zone = { ZoneId: 'Location' };
+  card._previousZone = { ZoneId: 'Hand' };
+  card.Revealed = true;
+  let state = tracker.update(parseSnapshot(raw, deck));
+  assert.equal(state.deckRows[1].cardId, 'Deadpool');
+  assert.equal(state.deckRows[1].status, 'played');
+  // Sersi-style transform: same entity, new card definition.
+  card.CardDefId = 'ProximaMidnight';
+  card.Cost = { Value: 4 };
+  card.Power = { Value: 7 };
+  state = tracker.update(parseSnapshot(raw, deck));
+  const slot = state.deckRows[1];
+  assert.equal(slot.cardId, 'Deadpool');
+  assert.equal(slot.name, 'Deadpool');
+  assert.equal(slot.entityId, 24);
+  assert.equal(slot.status, 'transformed');
+  assert.equal(slot.inferred, undefined);
+  assert.equal(slot.transformedInto, 'Proxima Midnight');
+  assert.equal(slot.cost, null);
+  assert.equal(state.deckRows[2].status, 'unseen');
+  const added = state.added.filter((c) => c.entityId === 24);
+  assert.equal(added.length, 1);
+  assert.equal(added[0].cardId, 'ProximaMidnight');
+  assert.equal(added[0].status, 'played');
+  assert.equal(added[0].power, 7);
+  assert.equal(added[0].transformedFrom, 'Deadpool');
+  assert.equal(state.history[0].name, 'Deadpool → Proxima Midnight');
+  assert.equal(state.history[0].to, 'transformed');
+});
+
+test('every identity an opponent card has shown stays listed', () => {
+  const tracker = new Tracker(),
+    raw = fixture(),
+    card = raw.RemoteGame.GameState._entityIdToEntity[21];
+  tracker.update(parseSnapshot(raw, deck));
+  card.CardDefId = 'Hulk';
+  let state = tracker.update(parseSnapshot(raw, deck));
+  assert.deepEqual(
+    state.opponent.map((c) => [
+      c.cardId,
+      c.status,
+      c.transformedFrom ?? null,
+      c.transformedInto ?? null,
+    ]),
+    [
+      ['Morbius', 'transformed', null, 'Hulk'],
+      ['Hulk', 'played', 'Morbius', null],
+    ],
+  );
+  card.CardDefId = 'RedHulk';
+  state = tracker.update(parseSnapshot(raw, deck));
+  assert.deepEqual(
+    state.opponent.map((c) => [c.cardId, c.status]),
+    [
+      ['Morbius', 'transformed'],
+      ['Hulk', 'transformed'],
+      ['RedHulk', 'played'],
+    ],
+  );
+  assert.equal(state.opponent[1].transformedFrom, 'Morbius');
+  assert.equal(state.opponent[1].transformedInto, 'Red Hulk');
+  // Back to hand and hidden again: the last identity is remembered, nothing is added or lost.
+  card._zone = { $ref: 'enemyhand' };
+  delete card.CardDefId;
+  card.Revealed = false;
+  state = tracker.update(parseSnapshot(raw, deck));
+  assert.deepEqual(
+    state.opponent.map((c) => [c.cardId, c.status]),
+    [
+      ['Morbius', 'transformed'],
+      ['Hulk', 'transformed'],
+      ['RedHulk', 'hand'],
+    ],
+  );
+});
+
+test('a transformed opponent card counts once in its pile', () => {
+  const tracker = new Tracker(),
+    raw = fixture(),
+    card = raw.RemoteGame.GameState._entityIdToEntity[21];
+  tracker.update(parseSnapshot(raw, deck));
+  card.CardDefId = 'Hulk';
+  tracker.update(parseSnapshot(raw, deck));
+  card._zone = { ZoneId: 'Graveyard' };
+  card._previousZone = { ZoneId: 'Location' };
+  const state = tracker.update(parseSnapshot(raw, deck));
+  const destroyed = state.opponent.filter((c) => c.side === 'opponent' && c.status === 'destroyed');
+  assert.deepEqual(
+    destroyed.map((c) => c.cardId),
+    ['Hulk'],
+  );
+  assert.equal(state.opponent.find((c) => c.cardId === 'Morbius').status, 'transformed');
+});
+
+test('a card that moves and transforms between two reads keeps both history events', () => {
+  const tracker = new Tracker(),
+    raw = fixture(),
+    card = raw.RemoteGame.GameState._entityIdToEntity[24];
+  card._zone = { $ref: 'hand' };
+  tracker.update(parseSnapshot(raw, deck));
+  card._zone = { ZoneId: 'Location' };
+  card._previousZone = { ZoneId: 'Hand' };
+  card.Revealed = true;
+  card.CardDefId = 'ProximaMidnight';
+  const history = tracker.update(parseSnapshot(raw, deck)).history;
+  assert.deepEqual(
+    history.slice(0, 2).map((h) => [h.name, h.from, h.to]),
+    [
+      ['Deadpool → Proxima Midnight', 'played', 'transformed'],
+      ['Deadpool', 'hand', 'played'],
+    ],
+  );
+});
+
+test('a deck card that changes back fills its slot again and is not added twice', () => {
+  const tracker = new Tracker(),
+    raw = fixture(),
+    card = raw.RemoteGame.GameState._entityIdToEntity[24];
+  tracker.update(parseSnapshot(raw, deck));
+  card.CardDefId = 'ProximaMidnight';
+  tracker.update(parseSnapshot(raw, deck));
+  card.CardDefId = 'Deadpool';
+  const state = tracker.update(parseSnapshot(raw, deck));
+  assert.equal(state.deckRows[1].cardId, 'Deadpool');
+  assert.notEqual(state.deckRows[1].status, 'transformed');
+  assert.deepEqual(
+    state.added.filter((c) => c.entityId === 24).map((c) => [c.cardId, c.status]),
+    [['ProximaMidnight', 'transformed']],
+  );
+});
+
+test('a transformed row shows the art the card had before it changed', () => {
+  const tracker = new Tracker(),
+    raw = fixture(),
+    card = raw.RemoteGame.GameState._entityIdToEntity[24];
+  tracker.update(parseSnapshot(raw, deck));
+  card.ArtVariantDefId = 'Deadpool_03';
+  tracker.update(parseSnapshot(raw, deck));
+  card.CardDefId = 'ProximaMidnight';
+  card.ArtVariantDefId = 'None';
+  const state = tracker.update(parseSnapshot(raw, deck));
+  assert.equal(state.deckRows[1].variantId, 'Deadpool_03');
+  assert.equal(state.added.find((c) => c.entityId === 24).variantId, null);
+});
+
+test('cards that never transform produce exactly one row', () => {
+  const state = new Tracker().update(parseSnapshot(fixture(), deck));
+  assert.equal(state.opponent.length, 1);
+  assert.ok(state.deckRows.every((row) => row.status !== 'transformed'));
+  assert.equal(state.added.length, 0);
 });

@@ -11,6 +11,7 @@ const labels = {
   destroyed: 'Destroyed',
   banished: 'Banished',
   graveyard: 'Graveyard',
+  transformed: 'Transformed',
   unknown: 'Seen',
 };
 const paths = {
@@ -249,7 +250,10 @@ function row(card) {
       : card.originKnown && card.origin !== card.side
         ? ' · From opponent’s deck'
         : '';
-  const description = `${card.name} · ${labels[card.status] || 'Seen'}${card.cost != null ? ` · Cost ${card.cost}` : ''}${card.power != null ? ` · Power ${card.power}` : ''}${origin}${card.inferred ? ' · Selected deck card not yet observed; its location is unconfirmed' : ''}`;
+  const where = card.transformedInto
+    ? `Transformed into ${card.transformedInto}`
+    : labels[card.status] || 'Seen';
+  const description = `${card.name} · ${where}${card.cost != null ? ` · Cost ${card.cost}` : ''}${card.power != null ? ` · Power ${card.power}` : ''}${origin}${card.transformedFrom ? ` · Transformed from ${card.transformedFrom}` : ''}${card.inferred ? ' · Selected deck card not yet observed; its location is unconfirmed' : ''}`;
   item.setAttribute('role', 'group');
   item.setAttribute('aria-label', description);
   item.addEventListener('pointerenter', () => showTooltip(item, card));
