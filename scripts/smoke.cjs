@@ -64,6 +64,33 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   if (!saved.includes('saved')) throw new Error('Settings not saved');
   const settingsState = await settings.webContents.executeJavaScript('window.snapper.getState()');
   if (!settingsState.settings.hideWhenUnfocused) throw new Error('Focus preference was not saved');
+  for (const win of windows)
+    await win.webContents.executeJavaScript(
+      'document.querySelectorAll(".portrait img").forEach((img) => (img.dataset.stale = "1"))',
+    );
+  await settings.webContents.executeJavaScript('document.querySelector("#update-cards").click()');
+  await wait(600);
+  const cards = await settings.webContents.executeJavaScript(`({
+    status: document.querySelector('#cards-status').textContent,
+    disabled: document.querySelector('#update-cards').disabled,
+  })`);
+  if (
+    cards.disabled ||
+    cards.status !== '2 cards · 1 new image · 1 without art yet. Waiting for art: FixtureNoArt'
+  )
+    throw new Error('Card pool update status: ' + JSON.stringify(cards));
+  // The update bumps artRevision: the panels drop their art lookups and render fresh images.
+  const updated = await settings.webContents.executeJavaScript('window.snapper.getState()');
+  if (updated.artRevision !== 1)
+    throw new Error('artRevision after update: ' + updated.artRevision);
+  for (const win of windows) {
+    const art = await win.webContents.executeJavaScript(`({
+      stale: document.querySelectorAll('img[data-stale]').length,
+      images: document.querySelectorAll('.portrait img').length,
+    })`);
+    if (art.stale || !art.images)
+      throw new Error('Panel art not refreshed after the card pool update: ' + JSON.stringify(art));
+  }
   fs.writeFileSync('artifacts/settings.png', (await settings.webContents.capturePage()).toPNG());
   console.log('Native overlay smoke test passed.');
   app.quit();

@@ -50,6 +50,34 @@ $('choose').onclick = async () => {
   const result = await api.choosePath();
   $('path-error').textContent = result?.error || '';
 };
+const count = (n, one, many = one + 's') => `${n} ${n === 1 ? one : many}`;
+$('update-cards').onclick = async () => {
+  const button = $('update-cards'),
+    status = $('cards-status');
+  button.disabled = true;
+  status.classList.remove('error');
+  status.textContent = 'Updating card pool…';
+  try {
+    const result = await api.updateCards();
+    if (result?.error) throw new Error(result.error);
+    const waiting = result.placeholders;
+    const parts = [
+      `${count(result.cards, 'card')} · ${count(result.downloaded, 'new image')} · ${waiting.length} without art yet`,
+    ];
+    if (waiting.length)
+      parts.push(
+        `Waiting for art: ${waiting.slice(0, 10).join(', ')}${waiting.length > 10 ? `, and ${waiting.length - 10} more` : ''}`,
+      );
+    if (result.failed.length)
+      parts.push(`${count(result.failed.length, 'image')} could not be checked`);
+    status.textContent = parts.join('. ');
+  } catch (error) {
+    status.classList.add('error');
+    status.textContent = `Card pool update failed: ${error?.message || error}`;
+  } finally {
+    button.disabled = false;
+  }
+};
 $('auto').onclick = () => api.autoPath();
 $('position').onclick = () => api.resetPosition();
 api.subscribe(render);

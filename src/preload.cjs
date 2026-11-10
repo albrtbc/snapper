@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('snapper', {
   endDrag: () => ipcRenderer.send('drag-end'),
   resetPosition: () => ipcRenderer.invoke('reset-position'),
   saveSettings: (value) => ipcRenderer.invoke('settings-save', value),
+  updateCards: () => ipcRenderer.invoke('cards-update'),
   choosePath: () => ipcRenderer.invoke('choose-path'),
   autoPath: () => ipcRenderer.invoke('auto-path'),
 });

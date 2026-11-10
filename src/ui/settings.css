@@ -177,13 +177,15 @@ section .note + .actions {
 }
 #saved,
 #path-error,
-#shortcut-errors {
+#shortcut-errors,
+#cards-status {
   font-size: 12px;
   margin: 8px 0 0;
   color: #bedb9a;
 }
 #path-error,
-#shortcut-errors {
+#shortcut-errors,
+#cards-status.error {
   color: #f1b295;
 }
 dl {

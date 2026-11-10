@@ -68,8 +68,13 @@
           and animations are not included.
         </p>
         <p class="note">
-          Images download from Snap.fan on first use and are cached on this computer.
+          Images download from Snap.fan and are cached on this computer. Update card pool checks
+          Snap.fan’s card list for new and changed art.
         </p>
+        <div class="actions">
+          <button id="update-cards" class="secondary">Update card pool</button>
+        </div>
+        <p id="cards-status" role="status" aria-live="polite"></p>
         <label class="check"
           ><input type="checkbox" id="hideWhenUnfocused" aria-describedby="focus-note" /> Hide
           panels when Marvel Snap is not focused</label

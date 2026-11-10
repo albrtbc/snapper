@@ -17,6 +17,7 @@ const { discoverStates } = require('./services/paths.cjs');
 const { gameRunning, gameBounds } = require('./services/game.cjs');
 const { activeFocus } = require('./services/focus.cjs');
 const { CardArt } = require('./services/art.cjs');
+const { CardPool } = require('./services/card-pool.cjs');
 const { demoState } = require('./demo.cjs');
 const { InputRegion } = require('./services/input-region.cjs');
 const { CardInfo } = require('./services/card-info.cjs');
@@ -47,6 +48,8 @@ let settings,
   configFile,
   reader,
   art,
+  cardPool,
+  cardPoolTimer,
   tray,
   settingsWindow,
   timer,
@@ -75,10 +78,12 @@ let running = false,
   shortcuts = [],
   gameRect = null;
 let drag = null;
+let artRevision = 0;
 const serialize = () => ({
   ...state,
   running,
   demo,
+  artRevision,
   locked,
   settings,
   shortcuts,
@@ -393,6 +398,7 @@ else {
       }
       art = new CardArt(path.join(app.getPath('userData'), 'card-art'));
       cardInfo = new CardInfo(path.join(app.getPath('userData'), 'card-info'));
+      cardPool = new CardPool(path.join(app.getPath('userData'), 'card-pool.json'), art);
       if (process.platform === 'linux') inputRegion = new InputRegion();
       for (const side of ['own', 'opponent']) {
         const win = new BrowserWindow({
@@ -550,6 +556,25 @@ else {
         ['settings'],
       );
       ipc.handle(
+        'cards-update',
+        async () => {
+          try {
+            const result = await cardPool.update();
+            artRevision++;
+            broadcast();
+            return {
+              cards: result.cards.length,
+              downloaded: result.downloaded,
+              placeholders: result.placeholders,
+              failed: result.failed,
+            };
+          } catch (error) {
+            return { error: String(error?.message || error).slice(0, 200) };
+          }
+        },
+        ['settings'],
+      );
+      ipc.handle(
         'choose-path',
         async (event) => {
           const result = await dialog.showOpenDialog(settingsWindow, {
@@ -598,6 +623,18 @@ else {
           visibility();
         });
       }
+      // Keep the pool and its art current without delaying startup or the first match.
+      if (!demo && settings.images)
+        cardPoolTimer = setTimeout(async () => {
+          try {
+            if (!settings.images || !(await cardPool.isDue())) return;
+            await cardPool.update();
+            artRevision++;
+            broadcast();
+          } catch (error) {
+            console.error('[card-pool]', error?.message || error);
+          }
+        }, 15000).unref();
       startReader();
       await monitor();
       followGame();
@@ -620,6 +657,7 @@ app.on('before-quit', () => {
   clearTimeout(timer);
   clearTimeout(boundsTimer);
   clearTimeout(focusTimer);
+  clearTimeout(cardPoolTimer);
   clearInterval(pointerTimer);
   inputRegion?.stop();
   avatarWorker?.terminate();

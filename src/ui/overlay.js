@@ -25,6 +25,7 @@ const paths = {
 };
 let current,
   lastRender = '',
+  artRevision,
   minimized = false;
 const artCache = new Map(),
   openPiles = new Map([
@@ -329,7 +330,14 @@ function render(state) {
       : 'M7 10V7a5 5 0 0 1 10 0M5 10h14v11H5Z M12 14v3',
   );
   if (state.locked && !tooltipOwner?.closest('.tools')) hideTooltip();
+  // A card pool update may have added or replaced art: drop the cached lookups, which also
+  // forces a render below. The first state has nothing cached yet.
+  if (state.artRevision !== artRevision) {
+    if (artRevision !== undefined) artCache.clear();
+    artRevision = state.artRevision;
+  }
   const signature = JSON.stringify([
+    state.artRevision,
     state.match,
     state.selectedDeck,
     state.status,

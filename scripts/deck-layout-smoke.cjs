@@ -46,6 +46,17 @@ demo.demoState = () => {
     power: 4,
   });
   cards.push({
+    entityId: 904,
+    cardId: 'FixtureNoArt',
+    name: 'Fixture No Art',
+    status: 'played',
+    side: 'opponent',
+    origin: 'opponent',
+    originKnown: true,
+    cost: 4,
+    power: 7,
+  });
+  cards.push({
     entityId: 902,
     cardId: 'Rock',
     name: 'Rock',
@@ -129,6 +140,31 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     ))
   )
     throw Error('Stolen enemy card must appear in both panels');
+  // A card without art keeps its tile readable: name, cost and power stay visible.
+  const fallback = await opponent.webContents.executeJavaScript(`(()=>{
+    const shown=n=>!!n&&getComputedStyle(n).display!=='none'&&n.getBoundingClientRect().width>0;
+    const row=document.querySelector('#cards [data-card-id="FixtureNoArt"]');
+    const art=document.querySelector('#cards [data-card-id="Blade"]');
+    return {
+      found:!!row,
+      hasArt:!!row?.querySelector('.has-art'),
+      name:shown(row?.querySelector('.card-name'))&&row.querySelector('.card-name').textContent,
+      cost:shown(row?.querySelector('.cost'))&&row.querySelector('.cost').textContent,
+      power:shown(row?.querySelector('.power'))&&row.querySelector('.power').textContent,
+      controlHasArt:!!art?.querySelector('.has-art'),
+      controlCostHidden:!shown(art?.querySelector('.cost')),
+    };
+  })()`);
+  if (
+    !fallback.found ||
+    fallback.hasArt ||
+    fallback.name !== 'Fixture No Art' ||
+    fallback.cost !== '4' ||
+    fallback.power !== '7' ||
+    !fallback.controlHasArt ||
+    !fallback.controlCostHidden
+  )
+    throw Error('Card without art must show its name, cost and power: ' + JSON.stringify(fallback));
   fs.mkdirSync('artifacts', { recursive: true });
   fs.writeFileSync(
     'artifacts/deck-layout-opponent.png',
@@ -150,6 +186,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     opponentGeneratedCardsHidden: true,
     ownAddedCardsPreserved: true,
     stolenEnemyCardInBothPanels: true,
+    noArtCardShowsNameCostPower: true,
     costAscending: true,
     zeroCostFirst: true,
     unseenBaseCostSorted: true,
