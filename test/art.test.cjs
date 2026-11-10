@@ -505,8 +505,12 @@ test('jobs rejected by a full queue are not backed off', async (t) => {
   site.gate = new Promise((resolve) => (release = resolve));
   site.offline = true;
   const keys = Array.from({ length: 70 }, (_, i) => 'Card' + i);
-  const results = Promise.all(keys.map((key) => site.art.get(key)));
-  while (site.requests.length < 3) await new Promise((resolve) => setImmediate(resolve));
+  let settled = 0;
+  const results = Promise.all(keys.map((key) => site.art.get(key).finally(() => settled++)));
+  // Release only once every call reached the queue: 64 waiting behind the gate and the
+  // 3 rejections already settled. Releasing earlier lets late calls in, which made this flaky.
+  while (settled < 3 || site.art.queue.waiting.length < 64)
+    await new Promise((resolve) => setImmediate(resolve));
   release();
   assert.deepEqual(await results, Array(70).fill(null));
   // 3 running and 64 waiting were accepted and failed; the other 3 were rejected.
