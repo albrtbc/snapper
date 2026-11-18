@@ -229,10 +229,20 @@ const live = (object, what) => {
     fail(`${what} is empty. Play a match, then run this again during it or on its results.`);
   return object;
 };
-const sceneManager = live(mem.ptr(manager + f.manager.sceneManager), 'The scene manager');
+const sceneManager = mem.ptr(manager + f.manager.sceneManager);
+let sceneManagerClass;
+if (sceneManager) sceneManagerClass = objectClass(sceneManager);
+else {
+  console.error(
+    'The scene manager is not resolved yet (first match after launch); reading its layout from CubeUnity.App.Scene.CubeSceneManager.',
+  );
+  sceneManagerClass = findClasses([['CubeUnity.App.Scene', 'CubeSceneManager']])[
+    'CubeUnity.App.Scene.CubeSceneManager'
+  ];
+}
 const gameMode = live(mem.ptr(manager + f.manager.currentGameMode), 'CurrentGameMode');
 const stateGame = live(mem.ptr(manager + f.manager.state), 'The state game');
-f.sceneManager = { sceneName: offset(objectClass(sceneManager), '_nextPrimarySceneName') };
+f.sceneManager = { sceneName: offset(sceneManagerClass, '_nextPrimarySceneName') };
 f.observable = { value: offset(objectClass(gameMode), '_value') };
 f.activeRemoteGame = {
   gameId: offset(
@@ -390,7 +400,7 @@ fs.writeFileSync(out, JSON.stringify(profile, null, 2) + '\n');
 console.log(hex(profile));
 console.log(`\nSaved ${out}`);
 if (process.argv.includes('--dump')) {
-  const dumped = [managerClass, panelClass, objectClass(sceneManager), objectClass(stateGame)];
+  const dumped = [managerClass, panelClass, sceneManagerClass, objectClass(stateGame)];
   dumped.push(objectClass(remote), objectClass(info), gameClass, playerClass, cardClass);
   const lines = [];
   for (const klass of dumped)

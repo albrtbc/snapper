@@ -39,6 +39,11 @@ attaches, writes or injects code. It works in five steps:
    methods or nested classes (`avatar.slots`).
 5. Reads both UnityPlayer vtables from the live avatar panels.
 
+During the first match after launching the game, the manager's lazy
+scene-manager dependency is still empty. The script then reads the scene
+manager's layout from the `CubeSceneManager` class by name, so a second match is
+not needed.
+
 It prints the candidate as JS with hex numbers and saves it to
 `.cache/reader-profile-<version>.json`. `--dump` also saves the field tables to
 `.cache/reader-classes-<version>.txt`. Both stay in the ignored `.cache/`
@@ -126,7 +131,8 @@ offset.
 
 ## History
 
-| Build   | Changes                                                                                                                                                                                                                                                 |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 57.17   | First profile. No derivation record.                                                                                                                                                                                                                    |
-| 58.15.1 | `GameManager` fields after `_sceneManager` moved −0x10. `CubeGame.Game` fields after `Id` moved +0x8. `Card` fields from `TurnRevealed` on moved +0x8. `ZoneId` gained `Trinket`. All usage slots moved. UnityPlayer was re-signed only (same vtables). |
+| Build   | Changes                                                                                                                                                                                                                                                                                                                                                                  |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 57.17   | First profile. No derivation record.                                                                                                                                                                                                                                                                                                                                     |
+| 58.15.1 | `GameManager` fields after `_sceneManager` moved −0x10. `CubeGame.Game` fields after `Id` moved +0x8. `Card` fields from `TurnRevealed` on moved +0x8. `ZoneId` gained `Trinket`. All usage slots moved. UnityPlayer was re-signed only (same vtables).                                                                                                                  |
+| 59.15.1 | `GameManager._activeRemoteGameInfo` moved −0x8. `CubeGame.Game` gained a field before `ClientResultMessage`; fields from `ClientResultMessage` on moved +0x8. `Card`, `Player`, `Zone` and enums unchanged. All usage slots moved (20 manager nested-type slots and 5 AvatarMenuPanel method slots, no nested-type slot). UnityPlayer was re-signed only (same vtables). |

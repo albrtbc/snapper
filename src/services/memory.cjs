@@ -9,19 +9,19 @@ const deepFreeze = (value) => {
 };
 // Game-build offsets, pinned to the SHA-256 of GameAssembly.dll. A new build
 // needs a reviewed entry; see docs/reader-profile.md. Never relax the hash check.
-const SNAP_58_15_1 = deepFreeze({
-  version: '58.15.1',
-  sha256: '62470eab01b9b3ddf8d7c2f5dd83a276fb1f40e9a5b0c26fd52b682359f4c19b',
-  unitySha256: 'a968a3ca5c1c30b400b81669e77b92f1f98186ca1f1aab310f172e94f0c01732',
+const SNAP_59_15_1 = deepFreeze({
+  version: '59.15.1',
+  sha256: 'b338e11a55eef7ad3cc13756e7cb90ad95954e99bc7ad34d6ceeb0fc49ea9fd4',
+  unitySha256: 'e677f147b7c35f4fad46a1f1d7af32991ee24f4bf7083f898a9de99e392e3aa5',
   managerNestedTypes: [
-    0x5fb3360, 0x5fb36a0, 0x5fb3b80, 0x5fb3d20, 0x5fb3ec0, 0x5fb4060, 0x5fb4200, 0x5fb43a0,
-    0x5fb4540, 0x5fb46e0, 0x5fb4880, 0x5fb4bc0, 0x5fb4f00, 0x5fb50a0, 0x5fb5240, 0x5fb53e0,
-    0x5fb5580, 0x5fb5720, 0x5fb58c0, 0x5fb5a60, 0x5fb5c00, 0x5fb5da0,
+    0x634f560, 0x634f710, 0x634fa70, 0x634fc20, 0x63502e0, 0x6350640, 0x63507f0, 0x63509a0,
+    0x6350b50, 0x6350d00, 0x6350eb0, 0x6351060, 0x63513c0, 0x63518d0, 0x6351a80, 0x6351de0,
+    0x6351f90, 0x6352140, 0x63522f0, 0x63524a0,
   ],
   gameModeRemote: 1,
   zones: ['Invalid', 'Deck', 'Hand', 'Location', 'Graveyard', 'SetAside', 'Banished', 'Trinket'],
   fields: {
-    manager: { state: 0x58, sceneManager: 0xb0, currentGameMode: 0x1c8, activeRemoteGame: 0x220 },
+    manager: { state: 0x58, sceneManager: 0xb0, currentGameMode: 0x1c8, activeRemoteGame: 0x218 },
     sceneManager: { sceneName: 0x70 },
     observable: { value: 0x10 },
     activeRemoteGame: { gameId: 0x10 },
@@ -33,10 +33,10 @@ const SNAP_58_15_1 = deepFreeze({
       totalTurns: 0x84,
       turn: 0x8c,
       cubeValue: 0xb0,
-      clientResultMessage: 0xc0,
-      playerWithInitiativeEntityId: 0xe0,
-      players: 0x168,
-      entities: 0x190,
+      clientResultMessage: 0xc8,
+      playerWithInitiativeEntityId: 0xe8,
+      players: 0x170,
+      entities: 0x198,
     },
     entity: { entityId: 0x10 },
     player: { deck: 0x78, hand: 0x80 },
@@ -59,12 +59,11 @@ const SNAP_58_15_1 = deepFreeze({
   avatar: {
     // [RVA of a metadata-usage slot, offset of the AvatarMenuPanel class inside it]
     slots: [
-      [0x5fb6218, 0x20],
-      [0x5fb63b8, 0x20],
-      [0x5fb6558, 0x20],
-      [0x5fb66f8, 0x20],
-      [0x5fb6898, 0x20],
-      [0x5ecd538, 0x50],
+      [0x63bf9e8, 0x20],
+      [0x63bfba0, 0x20],
+      [0x63bfd50, 0x20],
+      [0x63bff08, 0x20],
+      [0x63c00b8, 0x20],
     ],
     panel: { cardsInHand: 0xd8, settingsObject: 0x138 },
     // RVAs inside UnityPlayer.dll, pinned by unitySha256.
@@ -76,8 +75,8 @@ const SNAP_58_15_1 = deepFreeze({
     },
   },
 });
-const PROFILE = SNAP_58_15_1;
-const PROFILES = deepFreeze({ [SNAP_58_15_1.sha256]: SNAP_58_15_1 });
+const PROFILE = SNAP_59_15_1;
+const PROFILES = deepFreeze({ [SNAP_59_15_1.sha256]: SNAP_59_15_1 });
 function profileFor(sha256) {
   const profile = Object.hasOwn(PROFILES, sha256) ? PROFILES[sha256] : null;
   if (!profile)
